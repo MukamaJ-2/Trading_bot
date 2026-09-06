@@ -1,0 +1,45 @@
+name: Bot Scan
+
+# Runs the live paper-trading scan on a schedule using real Binance market data.
+# GitHub only fires `schedule` triggers from the default branch, so this starts
+# running once this workflow file is merged into that branch.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: trading-bot-data-writes
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Run scan
+        run: npm run scan
+
+      - name: Commit memory updates
+        run: |
+          git config user.name "trading-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          if [ -n "$(git status --porcelain data/)" ]; then
+            git add data/
+            git commit -m "Bot scan: update memory [skip ci]"
+            git push
+          else
+            echo "No memory changes to commit."
+          fi

@@ -90,6 +90,31 @@ everything else (strategy, risk, memory) works unchanged against the new series.
 - The bot never uses generated or fixture candle data — every command either uses real Binance
   data or fails with a clear, honest error.
 
+## Deployment: scheduled GitHub Actions (not Vercel)
+
+This is a CLI tool that needs to run repeatedly against live data and persist state to
+`data/ledger.csv`/`data/learnings.md` — that's a scheduled-job shape, not a web-request
+shape, so it runs on **GitHub Actions**, not Vercel:
+
+- `.github/workflows/bot-scan.yml` runs `npm run scan` every 15 minutes.
+- `.github/workflows/bot-replay.yml` runs `npm run replay:raw` once a day to refresh the
+  honest baseline and record any newly-seen real losing setups as lessons.
+
+Both workflows commit any changes to `data/` back to the repository (using the
+auto-provided `GITHUB_TOKEN`) so memory persists between runs, and both can also be run
+on demand from the Actions tab (`workflow_dispatch`).
+
+**Two things to know:**
+- GitHub only fires `schedule` triggers from the repository's **default branch**. These
+  workflows start running once this branch is merged into `main` (or whichever branch is
+  set as default) — pushing them to a feature branch alone won't activate the schedule.
+- GitHub auto-disables scheduled workflows after 60 days with no repository activity;
+  a commit, even a manual `workflow_dispatch` run, resets that clock.
+
+Unlike this development sandbox, GitHub-hosted runners have normal outbound internet
+access, so `api.binance.com` is reachable there — these workflows will produce real
+output once running.
+
 ## A known limitation in sandboxed environments
 
 Some hosted/sandboxed execution environments restrict outbound network access to an

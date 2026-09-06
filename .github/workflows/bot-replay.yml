@@ -1,0 +1,44 @@
+name: Bot Replay Raw Baseline
+
+# Runs the honest raw-replay baseline once a day: rescans real historical data for
+# any new losing crossover setups and records them as real lessons in data/learnings.md.
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: trading-bot-data-writes
+  cancel-in-progress: false
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Run replay:raw
+        run: npm run replay:raw
+
+      - name: Commit memory updates
+        run: |
+          git config user.name "trading-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          if [ -n "$(git status --porcelain data/)" ]; then
+            git add data/
+            git commit -m "Bot replay:raw: update memory [skip ci]"
+            git push
+          else
+            echo "No memory changes to commit."
+          fi
