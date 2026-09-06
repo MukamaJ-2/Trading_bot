@@ -1,0 +1,22 @@
+{
+  "name": "trading-bot",
+  "version": "1.0.0",
+  "description": "Paper-trading bot (no live trading) using real public market data and an MA-crossover strategy.",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "scan": "ts-node src/index.ts scan",
+    "replay:raw": "ts-node src/index.ts replay:raw",
+    "replay:memory": "ts-node src/index.ts replay:memory",
+    "memory:reset": "ts-node src/index.ts memory:reset"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}
