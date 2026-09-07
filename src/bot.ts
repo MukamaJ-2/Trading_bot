@@ -11,7 +11,7 @@ function log(label: string, message: string): void {
 }
 
 export async function runScan(): Promise<void> {
-  log("MARKET", `Fetching real candles for ${config.symbol} (${config.interval}) from Binance...`);
+  log("MARKET", `Fetching real candles for ${config.symbol} (${config.interval})...`);
   const candles = await fetchCandles(config.symbol, config.interval, config.scanCandleLimit);
   log("MARKET", `Loaded ${candles.length} real candles. Latest close: ${candles[candles.length - 1].close}`);
 

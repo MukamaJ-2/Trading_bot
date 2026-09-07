@@ -1,6 +1,6 @@
 name: Bot Scan
 
-# Runs the live paper-trading scan on a schedule using real Binance market data.
+# Runs the live paper-trading scan on a schedule using real Coinbase Exchange market data.
 # GitHub only fires `schedule` triggers from the default branch, so this starts
 # running once this workflow file is merged into that branch.
 on:

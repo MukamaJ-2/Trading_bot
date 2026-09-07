@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Trading Bot Dashboard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:        #f9f9f7;
+    --surface-1:   #fcfcfb;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:    #e1e0d9;
+    --baseline:    #c3c2b7;
+    --border:      rgba(11,11,11,0.10);
+    --series-1:    #2a78d6;
+    --series-1-wash: rgba(42,120,214,0.10);
+    --good:        #0ca30c;
+    --warning:     #fab219;
+    --critical:    #d03b3b;
+    --good-wash:     rgba(12,163,12,0.10);
+    --warning-wash:  rgba(250,178,25,0.14);
+    --critical-wash: rgba(208,59,59,0.10);
+    --muted-wash:    rgba(137,135,129,0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --page:        #0d0d0d;
+      --surface-1:   #1a1a19;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:    #2c2c2a;
+      --baseline:    #383835;
+      --border:      rgba(255,255,255,0.10);
+      --series-1:    #3987e5;
+      --series-1-wash: rgba(57,135,229,0.14);
+      --good:        #0ca30c;
+      --warning:     #fab219;
+      --critical:    #e66767;
+      --good-wash:     rgba(12,163,12,0.16);
+      --warning-wash:  rgba(250,178,25,0.16);
+      --critical-wash: rgba(230,103,103,0.14);
+      --muted-wash:    rgba(137,135,129,0.16);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 28px 20px 64px;
+  }
+  header.page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px 20px;
+    margin-bottom: 6px;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 650;
+    margin: 0;
+  }
+  .subtitle {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin: 2px 0 20px;
+  }
+  .subtitle a { color: var(--series-1); text-decoration: none; }
+  .subtitle a:hover { text-decoration: underline; }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    margin-bottom: 22px;
+  }
+  button.refresh {
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--series-1);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+  button.refresh:hover { background: var(--series-1-wash); }
+
+  section { margin-bottom: 32px; }
+  h2 {
+    font-size: 13px;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+    margin: 0 0 10px;
+  }
+
+  .empty-state {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    color: var(--text-secondary);
+    font-size: 13.5px;
+  }
+  .empty-state a { color: var(--series-1); }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .stat-tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .stat-value {
+    font-size: 26px;
+    font-weight: 650;
+    margin-top: 4px;
+    font-variant-numeric: proportional-nums;
+  }
+  .stat-value.good { color: var(--good); }
+  .stat-value.critical { color: var(--critical); }
+
+  figure.chart-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 16px 8px;
+    margin: 0;
+  }
+  figure.chart-card figcaption {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+  }
+  svg.chart { width: 100%; height: 220px; display: block; overflow: visible; }
+  svg.chart .gridline { stroke: var(--gridline); stroke-width: 1; }
+  svg.chart .baseline { stroke: var(--baseline); stroke-width: 1; }
+  svg.chart .line { fill: none; stroke: var(--series-1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  svg.chart .area { fill: var(--series-1-wash); }
+  svg.chart .dot { fill: var(--series-1); stroke: var(--surface-1); stroke-width: 2; }
+  svg.chart .axis-label { fill: var(--text-muted); font-size: 10.5px; }
+  .chart-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 9px;
+    font-size: 12px;
+    color: var(--text-primary);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    transform: translate(-50%, -110%);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.08s;
+  }
+  .chart-wrap { position: relative; }
+
+  table.ledger {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  table.ledger th, table.ledger td {
+    text-align: left;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--gridline);
+    white-space: nowrap;
+  }
+  table.ledger td.reason {
+    white-space: normal;
+    max-width: 320px;
+    color: var(--text-secondary);
+    font-variant-numeric: normal;
+  }
+  table.ledger th {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-1);
+  }
+  .table-scroll table.ledger th:first-child,
+  .table-scroll table.ledger td:first-child { padding-left: 14px; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px 2px 6px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 650;
+  }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .badge.win { background: var(--good-wash); color: var(--good); }
+  .badge.win .dot { background: var(--good); }
+  .badge.loss { background: var(--critical-wash); color: var(--critical); }
+  .badge.loss .dot { background: var(--critical); }
+  .badge.skip { background: var(--warning-wash); color: #9a6b00; }
+  .badge.skip .dot { background: var(--warning); }
+  @media (prefers-color-scheme: dark) {
+    .badge.skip { color: var(--warning); }
+  }
+  .badge.na { background: var(--muted-wash); color: var(--text-secondary); }
+  .badge.na .dot { background: var(--text-muted); }
+
+  ul.learnings { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  ul.learnings li {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--critical);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  ul.learnings li time {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+  }
+  ul.learnings li strong { color: var(--text-primary); }
+
+  footer {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-top: 40px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+  footer a { color: var(--series-1); }
+</style>
+</head>
+<body>
+<main>
+  <header class="page-head">
+    <h1>Trading Bot Dashboard</h1>
+  </header>
+  <p class="subtitle">
+    Paper trading only &middot; BTC-USD 5m MA crossover &middot;
+    <a href="https://github.com/MukamaJ-2/Trading_bot" target="_blank" rel="noopener">source repo</a> &middot;
+    <a href="https://github.com/MukamaJ-2/Trading_bot/actions" target="_blank" rel="noopener">Actions runs</a>
+  </p>
+
+  <div class="meta-row">
+    <span id="fetchStatus">Loading data/ledger.csv&hellip;</span>
+    <button class="refresh" id="refreshBtn" type="button">Refresh</button>
+  </div>
+
+  <div id="content"></div>
+
+  <footer>
+    Read-only view of <code>data/ledger.csv</code> and <code>data/learnings.md</code>, fetched
+    directly from the repository's <code>main</code> branch. It has no write access and cannot
+    trigger a scan or place any order &mdash; see the
+    <a href="https://github.com/MukamaJ-2/Trading_bot/actions" target="_blank" rel="noopener">Actions tab</a>
+    to run the bot on demand. Raw GitHub content is cached for a few minutes, so a brand-new run
+    may take a little while to show up here.
+  </footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var OWNER = "MukamaJ-2";
+  var REPO = "Trading_bot";
+  var BRANCH = "main";
+  var RAW_BASE = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/" + BRANCH + "/";
+
+  var content = document.getElementById("content");
+  var fetchStatus = document.getElementById("fetchStatus");
+  var refreshBtn = document.getElementById("refreshBtn");
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function parseCsv(text) {
+    var lines = text.replace(/\r\n/g, "\n").split("\n").filter(function (l) { return l.length > 0; });
+    if (lines.length <= 1) return [];
+    var header = splitCsvLine(lines[0]);
+    return lines.slice(1).map(function (line) {
+      var fields = splitCsvLine(line);
+      var row = {};
+      header.forEach(function (key, i) { row[key] = fields[i] !== undefined ? fields[i] : ""; });
+      return row;
+    });
+  }
+
+  function splitCsvLine(line) {
+    var fields = [];
+    var current = "";
+    var inQuotes = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (inQuotes) {
+        if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+        else if (ch === '"') { inQuotes = false; }
+        else { current += ch; }
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ",") {
+        fields.push(current); current = "";
+      } else {
+        current += ch;
+      }
+    }
+    fields.push(current);
+    return fields;
+  }
+
+  function fmtPct(n) { return (n >= 0 ? "+" : "") + n.toFixed(2) + "%"; }
+  function fmtTime(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+
+  function badge(outcome) {
+    if (outcome === "WIN") return '<span class="badge win"><span class="dot"></span>Win</span>';
+    if (outcome === "LOSS") return '<span class="badge loss"><span class="dot"></span>Loss</span>';
+    if (outcome === "OPEN") return '<span class="badge na"><span class="dot"></span>Open</span>';
+    return '<span class="badge na"><span class="dot"></span>&mdash;</span>';
+  }
+
+  function actionBadge(action) {
+    if (action === "SKIP") return '<span class="badge skip"><span class="dot"></span>SKIP</span>';
+    return escapeHtml(action);
+  }
+
+  function buildStatTiles(rows) {
+    var scored = rows.filter(function (r) { return r.outcome === "WIN" || r.outcome === "LOSS"; });
+    var wins = scored.filter(function (r) { return r.outcome === "WIN"; }).length;
+    var losses = scored.length - wins;
+    var winRate = scored.length ? (wins / scored.length) * 100 : 0;
+    var avgPnl = scored.length
+      ? scored.reduce(function (a, r) { return a + (parseFloat(r.pnl) || 0); }, 0) / scored.length
+      : 0;
+    var skipped = rows.filter(function (r) { return r.action === "SKIP"; }).length;
+
+    var winRateClass = scored.length === 0 ? "" : (winRate >= 50 ? "good" : "critical");
+    var avgPnlClass = scored.length === 0 ? "" : (avgPnl >= 0 ? "good" : "critical");
+
+    return "" +
+      '<div class="stat-grid">' +
+        tile("Scored setups", scored.length) +
+        tile("Win rate", scored.length ? winRate.toFixed(1) + "%" : "&ndash;", winRateClass) +
+        tile("Wins", wins) +
+        tile("Losses", losses) +
+        tile("Avg PnL", scored.length ? fmtPct(avgPnl) : "&ndash;", avgPnlClass) +
+        tile("Skipped by memory", skipped) +
+      "</div>";
+  }
+
+  function tile(label, value, cls) {
+    return '<div class="stat-tile"><div class="stat-label">' + escapeHtml(label) + '</div>' +
+      '<div class="stat-value' + (cls ? " " + cls : "") + '">' + value + "</div></div>";
+  }
+
+  function buildChart(rows) {
+    var scored = rows
+      .filter(function (r) { return r.outcome === "WIN" || r.outcome === "LOSS"; })
+      .slice()
+      .sort(function (a, b) { return new Date(a.timestamp) - new Date(b.timestamp); });
+
+    if (scored.length < 2) {
+      return '<div class="empty-state">Not enough scored trades yet for a cumulative PnL chart &mdash; need at least 2. Check back after <code>replay:raw</code> or <code>replay:memory</code> has scored a few setups.</div>';
+    }
+
+    var cum = 0;
+    var points = scored.map(function (r) {
+      cum += parseFloat(r.pnl) || 0;
+      return { t: new Date(r.timestamp), y: cum, row: r };
+    });
+
+    var w = 960, h = 220, padL = 44, padR = 12, padT = 16, padB = 24;
+    var plotW = w - padL - padR, plotH = h - padT - padB;
+
+    var yMin = Math.min(0, Math.min.apply(null, points.map(function (p) { return p.y; })));
+    var yMax = Math.max(0, Math.max.apply(null, points.map(function (p) { return p.y; })));
+    if (yMin === yMax) { yMin -= 1; yMax += 1; }
+    var tMin = points[0].t.getTime(), tMax = points[points.length - 1].t.getTime();
+    if (tMin === tMax) tMax = tMin + 1;
+
+    function xFor(t) { return padL + ((t - tMin) / (tMax - tMin)) * plotW; }
+    function yFor(y) { return padT + (1 - (y - yMin) / (yMax - yMin)) * plotH; }
+
+    var pathD = points.map(function (p, i) {
+      return (i === 0 ? "M" : "L") + xFor(p.t.getTime()).toFixed(1) + "," + yFor(p.y).toFixed(1);
+    }).join(" ");
+
+    var areaD = pathD +
+      " L" + xFor(points[points.length - 1].t.getTime()).toFixed(1) + "," + yFor(0).toFixed(1) +
+      " L" + xFor(points[0].t.getTime()).toFixed(1) + "," + yFor(0).toFixed(1) + " Z";
+
+    var zeroY = yFor(0).toFixed(1);
+    var gridLines = [yMin, (yMin + yMax) / 2, yMax].map(function (v) {
+      var y = yFor(v).toFixed(1);
+      return '<line class="gridline" x1="' + padL + '" x2="' + (w - padR) + '" y1="' + y + '" y2="' + y + '"></line>' +
+        '<text class="axis-label" x="4" y="' + (parseFloat(y) + 3) + '">' + v.toFixed(1) + "%</text>";
+    }).join("");
+
+    var dots = points.map(function (p, i) {
+      return '<circle class="dot" data-i="' + i + '" r="4" cx="' + xFor(p.t.getTime()).toFixed(1) + '" cy="' + yFor(p.y).toFixed(1) + '"></circle>';
+    }).join("");
+
+    var svg = '' +
+      '<svg class="chart" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" role="img" aria-label="Cumulative PnL over scored trades">' +
+        gridLines +
+        '<line class="baseline" x1="' + padL + '" x2="' + (w - padR) + '" y1="' + zeroY + '" y2="' + zeroY + '"></line>' +
+        '<path class="area" d="' + areaD + '"></path>' +
+        '<path class="line" d="' + pathD + '"></path>' +
+        dots +
+      "</svg>";
+
+    var tooltipData = points.map(function (p) {
+      return { label: fmtTime(p.row.timestamp) + " &middot; " + p.row.symbol + " " + p.row.action, value: "Cumulative: " + fmtPct(p.y) };
+    });
+
+    setTimeout(function () { wireChartHover(points); }, 0);
+    window.__chartTooltipData = tooltipData;
+
+    return '' +
+      '<figure class="chart-card">' +
+        '<div class="chart-wrap">' + svg + '<div class="chart-tooltip" id="chartTooltip"></div></div>' +
+        '<figcaption>Cumulative PnL (%) across scored replay/scan trades, oldest to newest. Full detail in the table below.</figcaption>' +
+      "</figure>";
+  }
+
+  function wireChartHover(points) {
+    var svg = document.querySelector("svg.chart");
+    var tooltip = document.getElementById("chartTooltip");
+    if (!svg || !tooltip) return;
+    var dots = svg.querySelectorAll(".dot");
+    dots.forEach(function (dot) {
+      dot.addEventListener("mouseenter", function () {
+        var i = parseInt(dot.getAttribute("data-i"), 10);
+        var p = points[i];
+        var rect = svg.getBoundingClientRect();
+        var wrap = svg.parentElement.getBoundingClientRect();
+        var cx = parseFloat(dot.getAttribute("cx")) / 960 * rect.width;
+        var cy = parseFloat(dot.getAttribute("cy")) / 220 * rect.height;
+        tooltip.innerHTML = "<strong>" + fmtTime(p.row.timestamp) + "</strong><br>" +
+          escapeHtml(p.row.symbol + " " + p.row.action) + " &middot; Cumulative " + fmtPct(p.y);
+        tooltip.style.left = cx + "px";
+        tooltip.style.top = cy + "px";
+        tooltip.style.opacity = "1";
+      });
+      dot.addEventListener("mouseleave", function () { tooltip.style.opacity = "0"; });
+    });
+  }
+
+  function buildTable(rows) {
+    var recent = rows.slice().reverse().slice(0, 200);
+    var trs = recent.map(function (r) {
+      return "<tr>" +
+        "<td>" + escapeHtml(fmtTime(r.timestamp)) + "</td>" +
+        "<td>" + escapeHtml(r.symbol) + "</td>" +
+        "<td>" + actionBadge(r.action) + "</td>" +
+        "<td>" + escapeHtml(r.price) + "</td>" +
+        "<td>" + escapeHtml(r.quantity) + "</td>" +
+        "<td>" + escapeHtml(r.mode) + "</td>" +
+        "<td>" + badge(r.outcome) + "</td>" +
+        "<td>" + escapeHtml(r.pnl === "" ? "–" : r.pnl + "%") + "</td>" +
+        '<td class="reason">' + escapeHtml(r.reason) + "</td>" +
+      "</tr>";
+    }).join("");
+
+    var note = rows.length > 200
+      ? '<p style="color:var(--text-muted);font-size:12px;margin:8px 2px 0;">Showing the 200 most recent of ' + rows.length + " rows.</p>"
+      : "";
+
+    return '' +
+      '<div class="table-scroll"><table class="ledger">' +
+        "<thead><tr><th>Time</th><th>Symbol</th><th>Action</th><th>Price</th><th>Qty</th><th>Mode</th><th>Outcome</th><th>PnL</th><th>Reason</th></tr></thead>" +
+        "<tbody>" + trs + "</tbody>" +
+      "</table></div>" + note;
+  }
+
+  function buildLearnings(md) {
+    var lines = md.split("\n").filter(function (l) { return /^-\s+\*\*/.test(l.trim()); });
+    if (lines.length === 0) {
+      return '<div class="empty-state">No lessons recorded yet. <code>data/learnings.md</code> only grows once <code>replay:raw</code> finds a real losing crossover setup &mdash; nothing is seeded or invented.</div>';
+    }
+    var items = lines.map(function (line) {
+      var m = line.trim().match(/^-\s+\*\*(.+?)\*\*\s+\(([^)]+)\):\s*(.*)$/);
+      if (!m) return "<li>" + escapeHtml(line.trim().replace(/^-\s+/, "")) + "</li>";
+      return "<li><time>" + escapeHtml(fmtTime(m[1])) + " &middot; " + escapeHtml(m[2]) + "</time>" + escapeHtml(m[3]) + "</li>";
+    }).join("");
+    return '<ul class="learnings">' + items + "</ul>";
+  }
+
+  function render(ledgerRows, learningsMd) {
+    if (ledgerRows.length === 0) {
+      content.innerHTML =
+        '<section><div class="empty-state">' +
+          "No scans have completed yet, so there's nothing to show. This fills in automatically once " +
+          '<code>Bot Scan</code> or <code>Bot Replay Raw Baseline</code> finishes a run &mdash; check ' +
+          '<a href="https://github.com/MukamaJ-2/Trading_bot/actions" target="_blank" rel="noopener">Actions</a> ' +
+          "for progress, or trigger one manually from there right now." +
+        "</div></section>";
+      return;
+    }
+
+    var html = "";
+    html += "<section><h2>Overview</h2>" + buildStatTiles(ledgerRows) + "</section>";
+    html += "<section><h2>Cumulative PnL</h2>" + buildChart(ledgerRows) + "</section>";
+    html += "<section><h2>Recent lessons</h2>" + buildLearnings(learningsMd) + "</section>";
+    html += "<section><h2>Ledger</h2>" + buildTable(ledgerRows) + "</section>";
+    content.innerHTML = html;
+  }
+
+  function load() {
+    fetchStatus.textContent = "Loading data/ledger.csv…";
+    content.innerHTML = "";
+
+    Promise.all([
+      fetch(RAW_BASE + "data/ledger.csv", { cache: "no-store" }).then(function (r) {
+        if (!r.ok) throw new Error("ledger.csv: HTTP " + r.status);
+        return r.text();
+      }),
+      fetch(RAW_BASE + "data/learnings.md", { cache: "no-store" }).then(function (r) {
+        if (!r.ok) throw new Error("learnings.md: HTTP " + r.status);
+        return r.text();
+      }),
+    ]).then(function (results) {
+      var rows = parseCsv(results[0]);
+      render(rows, results[1]);
+      fetchStatus.textContent = "Last fetched " + new Date().toLocaleTimeString() + " · " + rows.length + " ledger row(s)";
+    }).catch(function (err) {
+      content.innerHTML = '<div class="empty-state">Could not load data from GitHub: ' + escapeHtml(err.message) +
+        ". This can happen right after the very first commit, or if raw.githubusercontent.com is temporarily unreachable. Try Refresh in a moment.</div>";
+      fetchStatus.textContent = "Fetch failed";
+    });
+  }
+
+  refreshBtn.addEventListener("click", load);
+  load();
+})();
+</script>
+</body>
+</html>
