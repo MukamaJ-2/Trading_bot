@@ -52,8 +52,13 @@ logic are honest and correct before anything resembling real capital is ever con
 
 - No broker or exchange MCP/API is connected in this project. There is no account status,
   balance, or order-placement integration of any kind.
-- Market data comes only from Coinbase Exchange's **public**, unauthenticated candles REST
-  endpoint (`GET /products/{symbol}/candles`), which requires no API key.
+- Market data comes from Coinbase Exchange's **public**, unauthenticated candles REST
+  endpoint (`GET /products/{symbol}/candles`) by default, which requires no API key.
+- Optionally, `MARKET_DATA_PROVIDER=alpaca` switches to Alpaca's market data API instead
+  (e.g. for stock symbols). This is still **market-data-only** — Alpaca requires an API
+  key/secret even for read-only data, but nothing in this codebase calls any provider's
+  order-placement endpoint. Keys live only in `.env` (gitignored) or GitHub Actions
+  secrets, never in source code and never pasted into chat.
 - If a broker/MCP connection is verified and added later, it must be wired in as a separate,
   clearly-isolated adapter that defaults to paper/test mode, and it must go through the same
   connection-verification checklist described in the Miles High Club "Connect MCP To Claude

@@ -68,13 +68,41 @@ As a guardrail against copy-pasting a `.env` from a different project, the bot r
 start at all if `LIVE_TRADING=true` (or `1`) is set — even though that flag is not connected
 to any real functionality.
 
+## Optional: Alpaca as the market data source
+
+Coinbase stays the default because it needs no API key. If you'd rather use Alpaca instead
+(e.g. for stock symbols like `AAPL`, or its own crypto pair format like `BTC/USD`), that's
+supported via `src/marketAlpaca.ts` — still **market-data-only**, no order-placement code
+path exists for Alpaca any more than for Coinbase.
+
+Unlike Coinbase, Alpaca requires an API key/secret even for read-only data. **Get your own
+key from [alpaca.markets](https://alpaca.markets) — never share it in chat with an AI
+assistant, including this one.** Then:
+
+**Running locally:** copy `.env.example` to `.env` and uncomment/fill the four Alpaca lines
+(`MARKET_DATA_PROVIDER=alpaca`, `SYMBOL`, `ALPACA_API_KEY_ID`, `ALPACA_API_SECRET_KEY`). `.env`
+is gitignored, so this never gets committed.
+
+**Running in GitHub Actions:** the workflows already pass these through as optional
+environment variables that are empty unless you set them, so nothing breaks if you skip this.
+To enable Alpaca there:
+1. Repo → **Settings → Secrets and variables → Actions → Secrets** tab → add
+   `ALPACA_API_KEY_ID` and `ALPACA_API_SECRET_KEY` as repository secrets.
+2. Same page → **Variables** tab → add `MARKET_DATA_PROVIDER` = `alpaca` (and optionally
+   `SYMBOL` if you're not using the crypto default).
+
+Symbol format decides which Alpaca endpoint gets used automatically: anything containing
+`/` (like `BTC/USD`) uses the crypto bars endpoint; anything else (like `AAPL`) uses the
+stock bars endpoint.
+
 ## Configuration
 
 All settings live in `.env` (see `.env.example` for the full list and defaults):
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `SYMBOL` | `BTC-USD` | Market to trade (Coinbase product id) |
+| `SYMBOL` | `BTC-USD` | Market to trade (Coinbase product id, or `BTC/USD`/`AAPL`-style if using Alpaca) |
+| `MARKET_DATA_PROVIDER` | `coinbase` | `coinbase` (default, no key needed) or `alpaca` (see below) |
 | `INTERVAL` | `5m` | Candle interval |
 | `FAST_MA_PERIOD` / `SLOW_MA_PERIOD` | `9` / `21` | Crossover periods |
 | `TRADE_QUANTITY` | `0.01` | Quantity per trade |
