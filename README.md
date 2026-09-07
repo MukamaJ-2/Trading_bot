@@ -3,8 +3,10 @@
 A TypeScript/Node.js paper-trading bot built from the Miles High Club "Paper Trading Bot"
 Claude prompts (`TradingBotV2-1.pdf`). It trades **BTC-USD** on the **5-minute** timeframe
 using a 9/21 moving-average crossover strategy, using only real public market data from
-Coinbase Exchange. **There is no code path anywhere in this repository that places a real
-order.**
+Coinbase Exchange by default. **By default, there is no code path that places any order at
+all — every "trade" is a local simulation.** An optional, opt-in adapter can submit real
+orders to Alpaca's **paper** trading simulator (see "Optional: Alpaca paper trading"
+below) — there is still no path to live trading anywhere in this repository.
 
 > **Why Coinbase and not Binance?** The PDF's default data source is Binance's public klines
 > endpoint. It works fine from a home connection, but Binance returns HTTP 451 and refuses
@@ -54,19 +56,78 @@ safe values. Copy `.env.example` to `.env` only if you want to change a setting.
 
 ## Paper/local execution — and why there's no live mode
 
-This project intentionally has **no broker or exchange MCP/API connection**. All market data
+By default this project has **no broker or exchange connection at all**. All market data
 comes from Coinbase Exchange's public, unauthenticated candles endpoint
 (`GET https://api.exchange.coinbase.com/products/{symbol}/candles`) — no API key needed, no
 account touched. Every "order" is a local, in-memory record produced by `src/execution.ts`,
-which has no function that calls any real exchange order-placement endpoint.
-
-If you later verify a paper/test broker or exchange MCP connection (following the Miles High
-Club "Connect MCP To Claude Before Build" prompt), wire it in as a separate, clearly-isolated
-adapter — never let it replace the local paper simulation by default.
+which has no function that calls any real exchange order-placement endpoint. This stays true
+unless you explicitly opt into the Alpaca paper-trading broker described below.
 
 As a guardrail against copy-pasting a `.env` from a different project, the bot refuses to
 start at all if `LIVE_TRADING=true` (or `1`) is set — even though that flag is not connected
 to any real functionality.
+
+## Optional: Alpaca as the market data source
+
+Coinbase stays the default because it needs no API key. If you'd rather use Alpaca instead
+(e.g. for stock symbols like `AAPL`, or its own crypto pair format like `BTC/USD`), that's
+supported via `src/marketAlpaca.ts` — still **market-data-only** by itself; see the next
+section if you also want real (paper) order execution.
+
+Unlike Coinbase, Alpaca requires an API key/secret even for read-only data. **Get your own
+key from [alpaca.markets](https://alpaca.markets) — never share it in chat with an AI
+assistant, including this one.** Then:
+
+**Running locally:** copy `.env.example` to `.env` and uncomment/fill the four Alpaca lines
+(`MARKET_DATA_PROVIDER=alpaca`, `SYMBOL`, `ALPACA_API_KEY_ID`, `ALPACA_API_SECRET_KEY`). `.env`
+is gitignored, so this never gets committed.
+
+**Running in GitHub Actions:** the workflows already pass these through as optional
+environment variables that are empty unless you set them, so nothing breaks if you skip this.
+To enable Alpaca there:
+1. Repo → **Settings → Secrets and variables → Actions → Secrets** tab → add
+   `ALPACA_API_KEY_ID` and `ALPACA_API_SECRET_KEY` as repository secrets.
+2. Same page → **Variables** tab → add `MARKET_DATA_PROVIDER` = `alpaca` (and optionally
+   `SYMBOL` if you're not using the crypto default).
+
+Symbol format decides which Alpaca endpoint gets used automatically: anything containing
+`/` (like `BTC/USD`) uses the crypto bars endpoint; anything else (like `AAPL`) uses the
+stock bars endpoint.
+
+## Optional: Alpaca paper trading (real order execution, never live)
+
+This is a bigger step than the market-data adapter above: `src/brokerAlpaca.ts` can submit
+real orders — but only ever to Alpaca's **paper** trading simulator
+(`https://paper-api.alpaca.markets`), which is hardcoded as a constant in that file, not an
+environment variable. There is no setting, secret, or code path anywhere in this repository
+that can point it at Alpaca's live trading host. By default (`BROKER` unset) `npm run scan`
+still only produces the local in-memory simulation described above — this broker is a
+separate, explicit opt-in on top of it, same as the Miles High Club "Connect MCP To Claude
+Before Build" prompt's own paper-first, verify-before-trusting approach.
+
+**Follow this order — don't skip to step 3:**
+
+1. **`npm run broker:check`** — read-only connection report. Confirms your keys work, prints
+   account status/cash/buying power, open positions, open orders, and a market data check.
+   Places, previews, or cancels nothing. Stops immediately and tells you exactly what's wrong
+   if the account status isn't `ACTIVE` or anything else looks off.
+2. **`npm run broker:preview`** — shows exactly what the current signal/risk/memory decision
+   would do against your real (paper) Alpaca position, without submitting anything.
+3. **Only once both of those look right**, set `BROKER=alpaca` (`.env` locally, or the
+   `BROKER` repository **variable** for GitHub Actions) to let `npm run scan` actually submit
+   paper orders through Alpaca instead of simulating locally.
+
+**A real consequence to understand before flipping that switch in GitHub Actions
+specifically:** `Bot Scan` runs on a 15-minute schedule. Once `BROKER=alpaca` is set as a
+repo variable, every one of those scheduled runs can submit a real (paper) order the moment
+the strategy signals a trade — not just when you're watching. That's the intended behavior
+of an automated bot, but it's meaningfully different from everything else in this project,
+which only ever *simulates*. Consider running with `BROKER` set only locally for a while
+first.
+
+Requires `ALPACA_API_KEY_ID`/`ALPACA_API_SECRET_KEY` (same keys as the market-data adapter —
+Alpaca uses one key pair for both). Get them from your own Alpaca dashboard; never paste them
+into chat with any AI assistant, including this one.
 
 ## Configuration
 
@@ -74,7 +135,9 @@ All settings live in `.env` (see `.env.example` for the full list and defaults):
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `SYMBOL` | `BTC-USD` | Market to trade (Coinbase product id) |
+| `SYMBOL` | `BTC-USD` | Market to trade (Coinbase product id, or `BTC/USD`/`AAPL`-style if using Alpaca) |
+| `MARKET_DATA_PROVIDER` | `coinbase` | `coinbase` (default, no key needed) or `alpaca` (see below) |
+| `BROKER` | unset | unset (default, local simulation only) or `alpaca` (real paper order execution — see below) |
 | `INTERVAL` | `5m` | Candle interval |
 | `FAST_MA_PERIOD` / `SLOW_MA_PERIOD` | `9` / `21` | Crossover periods |
 | `TRADE_QUANTITY` | `0.01` | Quantity per trade |
@@ -90,11 +153,14 @@ everything else (strategy, risk, memory) works unchanged against the new series.
 
 ## Safety rules and limitations
 
-- Paper trading only, by design — no live trading path exists in this codebase.
-- No secrets or API keys are needed or stored anywhere in this project.
+- Paper trading only, by design — no live trading path exists in this codebase. The optional
+  Alpaca broker adapter can only ever submit to Alpaca's paper endpoint, hardcoded as a
+  constant, not configurable.
+- No secrets or API keys are needed by default; they're only needed at all if you opt into
+  Alpaca (market data or paper broker), and even then only via `.env`/GitHub Secrets.
 - No credentials are ever exposed to frontend code (there is no frontend).
-- No trade is ever simulated unless it passes the risk module, and no BUY/SELL survives if
-  memory flags it as a repeat of a real prior loss.
+- No trade is ever simulated or submitted unless it passes the risk module, and no BUY/SELL
+  survives if memory flags it as a repeat of a real prior loss.
 - The bot never uses generated or fixture candle data — every command either uses real
   Coinbase Exchange data or fails with a clear, honest error.
 

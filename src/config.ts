@@ -23,4 +23,18 @@ export const config = {
   replayCandleLimit: num("REPLAY_CANDLE_LIMIT", 1000),
   replayLookaheadCandles: num("REPLAY_LOOKAHEAD_CANDLES", 12),
   marketDataBaseUrl: process.env.MARKET_DATA_BASE_URL || "https://api.exchange.coinbase.com",
+
+  // Optional alternate data source. Coinbase (above) stays the default because it needs no
+  // API key at all. Alpaca is opt-in: set MARKET_DATA_PROVIDER=alpaca plus both key vars below.
+  // Market-data-only - this project never calls any order-placement endpoint on any provider.
+  marketDataProvider: (process.env.MARKET_DATA_PROVIDER || "coinbase").toLowerCase(),
+  alpacaKeyId: process.env.ALPACA_API_KEY_ID || "",
+  alpacaSecretKey: process.env.ALPACA_API_SECRET_KEY || "",
+  alpacaDataBaseUrl: process.env.ALPACA_DATA_BASE_URL || "https://data.alpaca.markets",
+
+  // Broker execution (order placement) is a separate opt-in from the market-data provider
+  // above. Unset by default -> every order stays a local, in-memory simulation. Setting
+  // BROKER=alpaca routes approved BUY/SELL through Alpaca's paper trading API instead -
+  // see src/brokerAlpaca.ts, which hardcodes the paper (never live) endpoint.
+  brokerEnabled: (process.env.BROKER || "").toLowerCase() === "alpaca",
 };

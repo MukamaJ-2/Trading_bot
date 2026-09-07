@@ -9,7 +9,9 @@
     "scan": "ts-node src/index.ts scan",
     "replay:raw": "ts-node src/index.ts replay:raw",
     "replay:memory": "ts-node src/index.ts replay:memory",
-    "memory:reset": "ts-node src/index.ts memory:reset"
+    "memory:reset": "ts-node src/index.ts memory:reset",
+    "broker:check": "ts-node src/index.ts broker:check",
+    "broker:preview": "ts-node src/index.ts broker:preview"
   },
   "dependencies": {
     "dotenv": "^16.4.5"
