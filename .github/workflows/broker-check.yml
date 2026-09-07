@@ -1,0 +1,27 @@
+name: Broker Check
+
+# Read-only Alpaca paper-trading connection report. Manual trigger only - this is a
+# diagnostic step, not something that should run on a schedule. Places, previews, or
+# cancels no order.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  broker-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Run broker:check
+        run: npm run broker:check
+        env:
+          MARKET_DATA_PROVIDER: ${{ vars.MARKET_DATA_PROVIDER }}
+          ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
+          ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
