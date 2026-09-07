@@ -10,7 +10,7 @@ function num(name: string, fallback: number): number {
 }
 
 export const config = {
-  symbol: process.env.SYMBOL || "BTCUSDT",
+  symbol: process.env.SYMBOL || "BTC-USD",
   interval: process.env.INTERVAL || "5m",
   fastPeriod: num("FAST_MA_PERIOD", 9),
   slowPeriod: num("SLOW_MA_PERIOD", 21),
@@ -22,5 +22,5 @@ export const config = {
   scanCandleLimit: num("SCAN_CANDLE_LIMIT", 100),
   replayCandleLimit: num("REPLAY_CANDLE_LIMIT", 1000),
   replayLookaheadCandles: num("REPLAY_LOOKAHEAD_CANDLES", 12),
-  binanceBaseUrl: process.env.BINANCE_BASE_URL || "https://api.binance.com",
+  marketDataBaseUrl: process.env.MARKET_DATA_BASE_URL || "https://api.exchange.coinbase.com",
 };

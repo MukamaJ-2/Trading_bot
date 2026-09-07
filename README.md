@@ -1,9 +1,17 @@
 # Trading Bot (Paper Trading Only)
 
 A TypeScript/Node.js paper-trading bot built from the Miles High Club "Paper Trading Bot"
-Claude prompts (`TradingBotV2-1.pdf`). It trades **BTCUSDT** on the **5-minute** timeframe
+Claude prompts (`TradingBotV2-1.pdf`). It trades **BTC-USD** on the **5-minute** timeframe
 using a 9/21 moving-average crossover strategy, using only real public market data from
-Binance. **There is no code path anywhere in this repository that places a real order.**
+Coinbase Exchange. **There is no code path anywhere in this repository that places a real
+order.**
+
+> **Why Coinbase and not Binance?** The PDF's default data source is Binance's public klines
+> endpoint. It works fine from a home connection, but Binance returns HTTP 451 and refuses
+> every cloud/datacenter IP under its own terms of service — that blocks GitHub Actions,
+> Vercel, AWS, and effectively all standard hosting equally. Coinbase Exchange's public
+> candles endpoint has no such restriction and still needs no API key, so it's the data
+> source here. `SYMBOL`/`INTERVAL` in `.env` still work the same way either way.
 
 ## What the bot does
 
@@ -47,10 +55,10 @@ safe values. Copy `.env.example` to `.env` only if you want to change a setting.
 ## Paper/local execution — and why there's no live mode
 
 This project intentionally has **no broker or exchange MCP/API connection**. All market data
-comes from Binance's public, unauthenticated klines endpoint
-(`GET https://api.binance.com/api/v3/klines`) — no API key needed, no account touched. Every
-"order" is a local, in-memory record produced by `src/execution.ts`, which has no function
-that calls any real exchange order-placement endpoint.
+comes from Coinbase Exchange's public, unauthenticated candles endpoint
+(`GET https://api.exchange.coinbase.com/products/{symbol}/candles`) — no API key needed, no
+account touched. Every "order" is a local, in-memory record produced by `src/execution.ts`,
+which has no function that calls any real exchange order-placement endpoint.
 
 If you later verify a paper/test broker or exchange MCP connection (following the Miles High
 Club "Connect MCP To Claude Before Build" prompt), wire it in as a separate, clearly-isolated
@@ -66,7 +74,7 @@ All settings live in `.env` (see `.env.example` for the full list and defaults):
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `SYMBOL` | `BTCUSDT` | Market to trade |
+| `SYMBOL` | `BTC-USD` | Market to trade (Coinbase product id) |
 | `INTERVAL` | `5m` | Candle interval |
 | `FAST_MA_PERIOD` / `SLOW_MA_PERIOD` | `9` / `21` | Crossover periods |
 | `TRADE_QUANTITY` | `0.01` | Quantity per trade |
@@ -87,8 +95,8 @@ everything else (strategy, risk, memory) works unchanged against the new series.
 - No credentials are ever exposed to frontend code (there is no frontend).
 - No trade is ever simulated unless it passes the risk module, and no BUY/SELL survives if
   memory flags it as a repeat of a real prior loss.
-- The bot never uses generated or fixture candle data — every command either uses real Binance
-  data or fails with a clear, honest error.
+- The bot never uses generated or fixture candle data — every command either uses real
+  Coinbase Exchange data or fails with a clear, honest error.
 
 ## Deployment: scheduled GitHub Actions (not Vercel)
 
@@ -112,23 +120,23 @@ on demand from the Actions tab (`workflow_dispatch`).
   a commit, even a manual `workflow_dispatch` run, resets that clock.
 
 Unlike this development sandbox, GitHub-hosted runners have normal outbound internet
-access, so `api.binance.com` is reachable there — these workflows will produce real
-output once running.
+access and are not geo/IP-blocked by Coinbase, so `api.exchange.coinbase.com` is reachable
+there — these workflows produce real output once running.
 
 ## A known limitation in sandboxed environments
 
 Some hosted/sandboxed execution environments restrict outbound network access to an
-allowlist of hosts. If `api.binance.com` is not reachable from wherever you run this bot, every
-command will fail with a clear network error rather than silently substituting fake data — that
-is intentional (see the honesty rules above). Run the bot somewhere with normal internet
-access (your own machine, a CI runner, or a Claude Code environment with outbound HTTPS
-allowed) to see real output.
+allowlist of hosts. If `api.exchange.coinbase.com` is not reachable from wherever you run
+this bot, every command will fail with a clear network error rather than silently
+substituting fake data — that is intentional (see the honesty rules above). Run the bot
+somewhere with normal internet access (your own machine, a CI runner, or a Claude Code
+environment with outbound HTTPS allowed) to see real output.
 
 ## Next three experiments to try in paper mode
 
 1. Change `INTERVAL` to `15m` or `1h` in `.env` and compare `replay:raw` metrics against the
    `5m` baseline — does the crossover strategy hold up on a slower timeframe?
-2. Point `SYMBOL` at a different pair (e.g. `ETHUSDT`) and run `replay:raw` then
+2. Point `SYMBOL` at a different pair (e.g. `ETH-USD`) and run `replay:raw` then
    `replay:memory` back to back to see how quickly memory starts blocking repeat losers on a
    different asset.
 3. Tighten `MAX_POSITION` or `TRADE_QUANTITY` in `.env` and re-run `scan` to see the risk
