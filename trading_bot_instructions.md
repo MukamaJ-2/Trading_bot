@@ -16,8 +16,10 @@ logic are honest and correct before anything resembling real capital is ever con
 
 ## 2. Safety Rules
 
-- Paper trading only. There is no code path that can place a real order.
-- No live trading path exists, and none should be added without a separate, explicit decision.
+- Paper trading only. By default, no code path places any order at all (local simulation
+  only). The one opt-in exception, the Alpaca broker adapter, can only ever submit to
+  Alpaca's paper endpoint — that endpoint is a hardcoded constant, not a setting.
+- No LIVE trading path exists, and none should be added without a separate, explicit decision.
 - No secrets, API keys, or credentials are stored in source code, ever.
 - No credentials are exposed to any frontend — this is a backend/CLI-only project.
 - No trade is ever simulated unless it has passed the risk module's checks.
@@ -50,19 +52,24 @@ logic are honest and correct before anything resembling real capital is ever con
 
 ## 5. Broker/MCP Rules
 
-- No broker or exchange MCP/API is connected in this project. There is no account status,
-  balance, or order-placement integration of any kind.
+- No broker/exchange connection is active by default. There is no account status, balance,
+  or order-placement integration unless explicitly enabled (below).
 - Market data comes from Coinbase Exchange's **public**, unauthenticated candles REST
   endpoint (`GET /products/{symbol}/candles`) by default, which requires no API key.
-- Optionally, `MARKET_DATA_PROVIDER=alpaca` switches to Alpaca's market data API instead
-  (e.g. for stock symbols). This is still **market-data-only** — Alpaca requires an API
-  key/secret even for read-only data, but nothing in this codebase calls any provider's
-  order-placement endpoint. Keys live only in `.env` (gitignored) or GitHub Actions
-  secrets, never in source code and never pasted into chat.
-- If a broker/MCP connection is verified and added later, it must be wired in as a separate,
-  clearly-isolated adapter that defaults to paper/test mode, and it must go through the same
-  connection-verification checklist described in the Miles High Club "Connect MCP To Claude
-  Before Build" prompt before it is trusted.
+  Optionally, `MARKET_DATA_PROVIDER=alpaca` switches to Alpaca's market data API instead
+  (e.g. for stock symbols) — market-data-only, no order path, on its own.
+- Optionally, `BROKER=alpaca` (a separate opt-in from the market-data setting above) routes
+  approved BUY/SELL decisions to Alpaca's **paper** trading API instead of the local
+  simulation. Verified per the Miles High Club "Connect MCP To Claude Before Build" prompt's
+  own checklist: `npm run broker:check` reads account status/positions/orders/market data
+  and stops immediately if anything looks live, unknown, or unsafe; `npm run broker:preview`
+  shows exactly what would be submitted, without submitting it. Only after both are clean
+  should `BROKER=alpaca` be set to let `scan` actually place paper orders.
+- Alpaca's paper endpoint (`https://paper-api.alpaca.markets`) is hardcoded in
+  `src/brokerAlpaca.ts`, not read from an environment variable — there is no setting that
+  can point this adapter at Alpaca's live trading host.
+- Alpaca API keys (used for market data, the broker, or both) live only in `.env`
+  (gitignored) or GitHub Actions secrets, never in source code and never pasted into chat.
 
 ## 6. Memory Rules
 
@@ -76,11 +83,13 @@ logic are honest and correct before anything resembling real capital is ever con
 
 ## 7. Definition of Done
 
-- `npm install`, `npm run scan`, `npm run replay:raw`, `npm run replay:memory`, and
-  `npm run memory:reset` all work.
-- The bot uses real public Coinbase Exchange market data, or fails with a clear, honest error if
-  that data is unavailable — it never falls back to generated or fixture candles.
+- `npm install`, `npm run scan`, `npm run replay:raw`, `npm run replay:memory`,
+  `npm run memory:reset`, `npm run broker:check`, and `npm run broker:preview` all work.
+- The bot uses real public market data, or fails with a clear, honest error if that data is
+  unavailable — it never falls back to generated or fixture candles.
 - Every run prints timestamped logs for market data fetch, computed signal, risk check, memory
   check (once memory exists), and final decision.
-- No real trade of any kind is ever placed — confirmed by there being no code path that calls a
-  real exchange order-placement endpoint anywhere in this repository.
+- No LIVE trade of any kind is ever placed — confirmed by there being no code path that calls
+  a live exchange order-placement endpoint anywhere in this repository. The one real
+  order-placement path that exists (`src/brokerAlpaca.ts`) is opt-in (`BROKER=alpaca`) and
+  hardcoded to Alpaca's paper endpoint.

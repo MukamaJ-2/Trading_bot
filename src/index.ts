@@ -1,11 +1,14 @@
 import { runScan } from "./bot";
 import { runReplayRaw, runReplayMemory } from "./replay";
 import { resetMemory } from "./memory";
+import { runBrokerCheck, runBrokerPreview } from "./brokerCheck";
 
 /**
- * Guardrail: this codebase has no live order-placement code path at all. This check exists
- * only to fail loudly if a LIVE_TRADING flag is ever copied in from another project's .env -
- * it is not wired to any real functionality either way.
+ * Guardrail: this codebase has no LIVE order-placement code path at all - the optional
+ * Alpaca broker adapter (src/brokerAlpaca.ts) is hardcoded to Alpaca's paper endpoint and
+ * cannot be pointed at live trading. This check exists only to fail loudly if a
+ * LIVE_TRADING flag is ever copied in from another project's .env - it is not wired to
+ * any real functionality either way.
  */
 function assertPaperModeOnly(): void {
   if (process.env.LIVE_TRADING === "true" || process.env.LIVE_TRADING === "1") {
@@ -34,9 +37,17 @@ async function main(): Promise<void> {
       resetMemory();
       console.log(`[${new Date().toISOString()}] [MEMORY] data/ledger.csv and data/learnings.md reset to empty.`);
       break;
+    case "broker:check":
+      await runBrokerCheck();
+      break;
+    case "broker:preview":
+      await runBrokerPreview();
+      break;
     default:
       console.error(`Unknown or missing command: "${command}".`);
-      console.error("Usage: ts-node src/index.ts <scan|replay:raw|replay:memory|memory:reset>");
+      console.error(
+        "Usage: ts-node src/index.ts <scan|replay:raw|replay:memory|memory:reset|broker:check|broker:preview>"
+      );
       process.exit(1);
   }
 }

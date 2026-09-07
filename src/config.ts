@@ -31,4 +31,10 @@ export const config = {
   alpacaKeyId: process.env.ALPACA_API_KEY_ID || "",
   alpacaSecretKey: process.env.ALPACA_API_SECRET_KEY || "",
   alpacaDataBaseUrl: process.env.ALPACA_DATA_BASE_URL || "https://data.alpaca.markets",
+
+  // Broker execution (order placement) is a separate opt-in from the market-data provider
+  // above. Unset by default -> every order stays a local, in-memory simulation. Setting
+  // BROKER=alpaca routes approved BUY/SELL through Alpaca's paper trading API instead -
+  // see src/brokerAlpaca.ts, which hardcodes the paper (never live) endpoint.
+  brokerEnabled: (process.env.BROKER || "").toLowerCase() === "alpaca",
 };

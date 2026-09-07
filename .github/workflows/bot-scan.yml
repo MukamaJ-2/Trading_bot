@@ -36,6 +36,11 @@ jobs:
           MARKET_DATA_PROVIDER: ${{ vars.MARKET_DATA_PROVIDER }}
           ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
           ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
+          # CAUTION: if the BROKER repo variable is set to "alpaca", this scheduled run
+          # will actually submit real Alpaca PAPER orders every 15 minutes (never live -
+          # src/brokerAlpaca.ts hardcodes the paper endpoint). Run `npm run broker:check`
+          # and `npm run broker:preview` locally or via workflow_dispatch first.
+          BROKER: ${{ vars.BROKER }}
 
       - name: Commit memory updates
         run: |
