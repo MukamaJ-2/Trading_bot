@@ -111,3 +111,4 @@ timestamp,symbol,action,price,quantity,reason,mode,outcome,pnl
 2026-09-08T07:44:59.999Z,BTC-USD,BUY,78410.71,0.01,replay:raw scored BUY crossover at 78410.71 -> 78513.35 after 12 candles.,replay:raw,WIN,0.1309
 2026-09-08T08:19:59.999Z,BTC-USD,SELL,78314.99,0.01,replay:raw scored SELL crossover at 78314.99 -> 78394.27 after 12 candles.,replay:raw,LOSS,-0.1012
 2026-09-08T08:39:59.999Z,BTC-USD,BUY,78520.29,0.01,replay:raw scored BUY crossover at 78520.29 -> 78668.24 after 12 candles.,replay:raw,WIN,0.1884
+2026-09-09T09:39:00.200Z,BTC-USD,SKIP,79314.81,0,"Memory blocked this trade: BTC-USD lost on a similar SELL crossover setup before (recorded 2026-09-08T08:19:59.999Z, PnL -0.1012%).",scan,N/A,
