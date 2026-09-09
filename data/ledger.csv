@@ -167,3 +167,11 @@ timestamp,symbol,action,price,quantity,reason,mode,outcome,pnl
 2026-09-09T05:59:59.999Z,BTC-USD,SELL,78921.79,0.01,replay:raw scored SELL crossover at 78921.79 -> 79150.25 after 12 candles.,replay:raw,LOSS,-0.2895
 2026-09-09T06:39:59.999Z,BTC-USD,BUY,79201.77,0.01,replay:raw scored BUY crossover at 79201.77 -> 79214.43 after 12 candles.,replay:raw,WIN,0.016
 2026-09-09T09:39:59.999Z,BTC-USD,SELL,79307.9,0.01,replay:raw scored SELL crossover at 79307.9 -> 79138.81 after 12 candles.,replay:raw,WIN,0.2132
+2026-09-07T02:39:59.999Z,BTC-USD,BUY,80375.92,0.01,replay:raw scored BUY crossover at 80375.92 -> 79654.62 after 12 candles.,replay:raw,LOSS,-0.8974
+2026-09-07T13:49:59.999Z,BTC-USD,SELL,79313.74,0.01,replay:raw scored SELL crossover at 79313.74 -> 79077.52 after 12 candles.,replay:raw,WIN,0.2978
+2026-09-08T08:19:59.999Z,BTC-USD,SELL,78314.99,0.01,replay:raw scored SELL crossover at 78314.99 -> 78394.27 after 12 candles.,replay:raw,LOSS,-0.1012
+2026-09-08T11:09:59.999Z,BTC-USD,SELL,78378.19,0.01,replay:raw scored SELL crossover at 78378.19 -> 78321.08 after 12 candles.,replay:raw,WIN,0.0729
+2026-09-08T13:39:59.999Z,BTC-USD,SELL,77827.99,0.01,replay:raw scored SELL crossover at 77827.99 -> 78320.66 after 12 candles.,replay:raw,LOSS,-0.633
+2026-09-09T00:14:59.999Z,BTC-USD,BUY,78719.3,0.01,replay:raw scored BUY crossover at 78719.3 -> 78723.56 after 12 candles.,replay:raw,WIN,0.0054
+2026-09-09T04:14:59.999Z,BTC-USD,BUY,78823.48,0.01,replay:raw scored BUY crossover at 78823.48 -> 79260.93 after 12 candles.,replay:raw,WIN,0.555
+2026-09-09T18:09:59.999Z,BTC-USD,SELL,78665.79,0.01,replay:raw scored SELL crossover at 78665.79 -> 78372.44 after 12 candles.,replay:raw,WIN,0.3729
