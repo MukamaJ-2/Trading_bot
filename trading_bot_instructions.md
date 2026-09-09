@@ -26,17 +26,25 @@ logic are honest and correct before anything resembling real capital is ever con
 
 ## 3. Strategy Rules
 
-- Indicators: 9-period fast simple moving average (SMA), 21-period slow SMA, computed on close
-  prices.
-- Entry (BUY): the fast SMA crosses **above** the slow SMA on the most recent completed candle
-  (a "bullish crossover").
-- Exit (SELL): the fast SMA crosses **below** the slow SMA on the most recent completed candle
-  (a "bearish crossover").
-- Hold: no fresh crossover on the most recent candle.
+- Indicators: 9-period fast simple moving average (SMA), 21-period slow SMA, 50-period trend
+  SMA, and a 20-candle average volume — all computed on real candle data.
+- A raw crossover (fast SMA crossing the slow SMA on the most recent completed candle) is only
+  a *candidate* signal. It only becomes a real trade if it also passes two confirmations —
+  fewer, higher-conviction trades instead of acting on every crossover:
+  1. **Trend alignment**: a bullish crossover only counts as BUY if price is **above** the
+     50-period trend SMA; a bearish crossover only counts as SELL if price is **below** it.
+  2. **Volume confirmation**: the crossover candle's volume must be at least **1.5x** the
+     average volume of the prior 20 candles — a real move, not noise.
+- Hold: no fresh crossover on the most recent candle, OR a crossover that fails trend alignment
+  or volume confirmation. Every HOLD states the specific reason (no crossover, wrong side of
+  the trend, or volume too low), so the log is always honest about why nothing was traded.
+- Configurable via `.env`: `TREND_MA_PERIOD` (default 50), `VOLUME_LOOKBACK` (default 20),
+  `VOLUME_MULTIPLIER` (default 1.5).
 - Backtest notes: no live TradingView/backtest MCP was available in this environment, so this
   strategy was not pre-validated in TradingView. Instead, the bot's own `replay:raw` command
   performs an honest historical replay against real Coinbase candles and reports real win/loss
-  metrics for this exact rule set — treat that as the first real validation of the strategy.
+  metrics for this exact rule set (crossover + trend + volume confirmation) — treat that as the
+  first real validation of the strategy.
 
 ## 4. Risk Rules
 

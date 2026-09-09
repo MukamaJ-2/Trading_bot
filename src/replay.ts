@@ -1,9 +1,15 @@
 import { Candle, LedgerRow } from "./types";
 import { config } from "./config";
 import { fetchCandles } from "./market";
-import { simpleMovingAverage } from "./strategy";
+import { computeSignal, ConfirmationParams } from "./strategy";
 import { appendLedgerRow, appendLearning, hasAnyMemory, readLearnings, readLedgerRows } from "./memory";
 import { applyMemoryFilter } from "./adaptiveFilter";
+
+const CONFIRMATION: ConfirmationParams = {
+  trendPeriod: config.trendPeriod,
+  volumeLookback: config.volumeLookback,
+  volumeMultiplier: config.volumeMultiplier,
+};
 
 export interface CrossoverEvent {
   index: number;
@@ -34,36 +40,25 @@ function log(label: string, message: string): void {
   console.log(`[${new Date().toISOString()}] [${label}] ${message}`);
 }
 
-/** Finds every real fast/slow MA crossover event in the given candle series. */
+/**
+ * Finds every real confirmed BUY/SELL signal in the given candle series, using the exact
+ * same trend + volume confirmed-signal logic as live scan/broker-preview (single source of
+ * truth - the backtest baseline never diverges from what live trading would have done).
+ */
 export function detectCrossovers(
   candles: Candle[],
   fastPeriod: number,
   slowPeriod: number
 ): CrossoverEvent[] {
   const events: CrossoverEvent[] = [];
-  let prevFast: number | null = null;
-  let prevSlow: number | null = null;
 
   for (let i = 0; i < candles.length; i++) {
     const window = candles.slice(0, i + 1);
-    const fast = simpleMovingAverage(window, fastPeriod);
-    const slow = simpleMovingAverage(window, slowPeriod);
+    const signal = computeSignal(window, fastPeriod, slowPeriod, CONFIRMATION);
 
-    if (fast !== null && slow !== null && prevFast !== null && prevSlow !== null) {
-      const wasBelow = prevFast <= prevSlow;
-      const isAbove = fast > slow;
-      const wasAbove = prevFast >= prevSlow;
-      const isBelow = fast < slow;
-
-      if (wasBelow && isAbove) {
-        events.push({ index: i, timestamp: candles[i].closeTime, action: "BUY", entryPrice: candles[i].close });
-      } else if (wasAbove && isBelow) {
-        events.push({ index: i, timestamp: candles[i].closeTime, action: "SELL", entryPrice: candles[i].close });
-      }
+    if (signal.action === "BUY" || signal.action === "SELL") {
+      events.push({ index: i, timestamp: candles[i].closeTime, action: signal.action, entryPrice: candles[i].close });
     }
-
-    prevFast = fast;
-    prevSlow = slow;
   }
 
   return events;

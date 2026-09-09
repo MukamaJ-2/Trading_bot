@@ -1,0 +1,43 @@
+name: Guard .env.example
+
+# .env.example is a committed, PUBLIC template file - real credential values must
+# never land in it (this has happened twice: an exposed Alpaca Key ID, then a full
+# Key ID + Secret pair). This check fails loudly, immediately, whenever it does.
+on:
+  push:
+    paths:
+      - ".env.example"
+  pull_request:
+    paths:
+      - ".env.example"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check .env.example for real credential values
+        run: |
+          set -euo pipefail
+          FILE=".env.example"
+          FAIL=0
+          while IFS= read -r line || [ -n "$line" ]; do
+            trimmed="$(printf '%s' "$line" | sed -e 's/^[[:space:]]*//')"
+            case "$trimmed" in
+              "#"*|"") continue ;;
+            esac
+            if printf '%s' "$trimmed" | grep -qE '^(ALPACA_API_KEY_ID|ALPACA_API_SECRET_KEY)[[:space:]]*='; then
+              value="$(printf '%s' "$trimmed" | sed -E 's/^[A-Z_]+[[:space:]]*=[[:space:]]*//')"
+              if [ -n "$value" ]; then
+                echo "::error file=$FILE::Real value found for \"$trimmed\" - this is a committed PUBLIC template. Credential values belong only in .env (gitignored) or GitHub Actions secrets, never here."
+                FAIL=1
+              fi
+            fi
+          done < "$FILE"
+          if [ "$FAIL" -eq 1 ]; then
+            echo ""
+            echo "If a real key/secret was just committed: treat it as compromised and regenerate it in your Alpaca dashboard immediately, then update the ALPACA_API_KEY_ID/ALPACA_API_SECRET_KEY GitHub repository secrets with the new values."
+            exit 1
+          fi
+          echo "OK: .env.example has no real credential values."
