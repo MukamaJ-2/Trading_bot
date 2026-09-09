@@ -85,7 +85,11 @@ export async function runBrokerCheck(): Promise<void> {
 export async function runBrokerPreview(): Promise<void> {
   log("BROKER", `Fetching real candles for ${config.symbol} (${config.interval})...`);
   const candles = await fetchCandles(config.symbol, config.interval, config.scanCandleLimit);
-  const signal = computeSignal(candles, config.fastPeriod, config.slowPeriod);
+  const signal = computeSignal(candles, config.fastPeriod, config.slowPeriod, {
+    trendPeriod: config.trendPeriod,
+    volumeLookback: config.volumeLookback,
+    volumeMultiplier: config.volumeMultiplier,
+  });
   log("SIGNAL", `${signal.action} - ${signal.reason}`);
 
   let currentPosition = 0;

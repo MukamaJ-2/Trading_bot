@@ -16,7 +16,11 @@ export async function runScan(): Promise<void> {
   const candles = await fetchCandles(config.symbol, config.interval, config.scanCandleLimit);
   log("MARKET", `Loaded ${candles.length} real candles. Latest close: ${candles[candles.length - 1].close}`);
 
-  const signal = computeSignal(candles, config.fastPeriod, config.slowPeriod);
+  const signal = computeSignal(candles, config.fastPeriod, config.slowPeriod, {
+    trendPeriod: config.trendPeriod,
+    volumeLookback: config.volumeLookback,
+    volumeMultiplier: config.volumeMultiplier,
+  });
   log("SIGNAL", `${signal.action} - ${signal.reason}`);
 
   let currentPosition = 0;

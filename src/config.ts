@@ -14,6 +14,14 @@ export const config = {
   interval: process.env.INTERVAL || "5m",
   fastPeriod: num("FAST_MA_PERIOD", 9),
   slowPeriod: num("SLOW_MA_PERIOD", 21),
+
+  // Confirmation filters on top of the raw crossover - fewer, higher-conviction trades
+  // instead of acting on every crossover. A crossover only becomes a real BUY/SELL if
+  // price is on the right side of the trend MA AND volume is a real spike, not noise.
+  trendPeriod: num("TREND_MA_PERIOD", 50),
+  volumeLookback: num("VOLUME_LOOKBACK", 20),
+  volumeMultiplier: num("VOLUME_MULTIPLIER", 1.5),
+
   tradeQuantity: num("TRADE_QUANTITY", 0.01),
   maxPosition: num("MAX_POSITION", 0.05),
   stopLossPct: num("STOP_LOSS_PCT", 2),
