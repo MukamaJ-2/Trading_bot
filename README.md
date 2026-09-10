@@ -2,9 +2,10 @@
 
 A TypeScript/Node.js paper-trading bot built from the Miles High Club "Paper Trading Bot"
 Claude prompts (`TradingBotV2-1.pdf`). It trades **BTC-USD** on the **5-minute** timeframe
-using three independent, confirmed strategies — a 9/21 MA crossover, a MACD crossover, and an
-RSI mean-reversion reversal — each requiring its own trend and/or volume confirmation before a
-signal is trusted as a real trade (fewer, higher-conviction trades — see
+using five independent, confirmed strategies — a 9/21 MA crossover, a MACD crossover, an RSI
+mean-reversion reversal, a Fibonacci retracement bounce, and a Bollinger Bands reversion — each
+requiring its own trend and/or volume confirmation before a signal is trusted as a real trade
+(fewer, higher-conviction trades — see
 [`trading_bot_instructions.md`](trading_bot_instructions.md) section 3), using only real public
 market data from Coinbase Exchange by default. **By default, there is no code path that places
 any order at all — every "trade" is a local simulation.** An optional, opt-in adapter can
@@ -149,6 +150,8 @@ All settings live in `.env` (see `.env.example` for the full list and defaults):
 | `MACD_FAST_PERIOD` / `MACD_SLOW_PERIOD` / `MACD_SIGNAL_PERIOD` | `12` / `26` / `9` | MACD strategy periods |
 | `RSI_PERIOD` | `14` | RSI strategy lookback period |
 | `RSI_OVERSOLD` / `RSI_OVERBOUGHT` | `30` / `70` | RSI reversal thresholds |
+| `FIB_LOOKBACK` / `FIB_LEVEL` | `50` / `0.618` | Fibonacci swing lookback and retracement level (golden ratio) |
+| `BOLLINGER_PERIOD` / `BOLLINGER_STDDEV` | `20` / `2` | Bollinger Bands lookback and standard-deviation width |
 | `TRADE_QUANTITY` | `0.01` | Quantity per trade |
 | `MAX_POSITION` | `0.05` | Max position size before risk SKIPs a trade |
 | `STOP_LOSS_PCT` / `TAKE_PROFIT_PCT` | `2` / `4` | Documented risk bounds (see `trading_bot_instructions.md`) |

@@ -26,8 +26,8 @@ logic are honest and correct before anything resembling real capital is ever con
 
 ## 3. Strategy Rules
 
-Three independent, confirmed strategies are evaluated on every scan, in order. The first one
-that produces a real BUY/SELL wins; if all three come back HOLD, the log reports the specific
+Five independent, confirmed strategies are evaluated on every scan, in order. The first one
+that produces a real BUY/SELL wins; if all five come back HOLD, the log reports the specific
 reason from each one. This keeps every individual trade "fewer, higher-conviction" while giving
 the bot more real ways to find a signal than waiting on one specific setup.
 
@@ -44,12 +44,21 @@ the bot more real ways to find a signal than waiting on one specific setup.
    below) or overbought (RSI crosses back below 70 from above) territory, using Wilder's
    14-period RSI. Confirmed by volume only — **no trend filter**, since a reversal signal is,
    by definition, expected to go against the recent trend.
-- Hold: none of the three strategies produced a fresh, confirmed signal on the most recent
+4. **Fibonacci retracement** — finds the swing high/low over the last 50 candles (excluding the
+   current one, so there's no lookahead), and watches for price touching the classic **61.8%**
+   golden-ratio retracement level and closing back on the trend side — the standard "buy the
+   dip / sell the rally" continuation setup. Confirmed by volume only.
+5. **Bollinger Bands** — price touching the upper or lower band (20-period mean ± 2 standard
+   deviations) on the prior candle and closing back inside the band on this one — a real
+   reversion, not a break. Confirmed by volume only.
+- Hold: none of the five strategies produced a fresh, confirmed signal on the most recent
   candle. The log states each strategy's specific reason (no crossover/reversal, wrong side of
   the trend, or volume too low), so it's always honest about why nothing was traded.
 - Configurable via `.env`: `TREND_MA_PERIOD` (default 50), `VOLUME_LOOKBACK` (default 20),
   `VOLUME_MULTIPLIER` (default 1.5), `MACD_FAST_PERIOD`/`MACD_SLOW_PERIOD`/`MACD_SIGNAL_PERIOD`
-  (default 12/26/9), `RSI_PERIOD` (default 14), `RSI_OVERSOLD`/`RSI_OVERBOUGHT` (default 30/70).
+  (default 12/26/9), `RSI_PERIOD` (default 14), `RSI_OVERSOLD`/`RSI_OVERBOUGHT` (default 30/70),
+  `FIB_LOOKBACK`/`FIB_LEVEL` (default 50/0.618), `BOLLINGER_PERIOD`/`BOLLINGER_STDDEV`
+  (default 20/2).
 - Backtest notes: no live TradingView/backtest MCP was available in this environment, so these
   strategies were not pre-validated in TradingView. Instead, the bot's own `replay:raw` command
   performs an honest historical replay against real Coinbase candles and reports real win/loss
