@@ -9,6 +9,12 @@ const CONFIRMATION: ConfirmationParams = {
   trendPeriod: config.trendPeriod,
   volumeLookback: config.volumeLookback,
   volumeMultiplier: config.volumeMultiplier,
+  macdFastPeriod: config.macdFastPeriod,
+  macdSlowPeriod: config.macdSlowPeriod,
+  macdSignalPeriod: config.macdSignalPeriod,
+  rsiPeriod: config.rsiPeriod,
+  rsiOversold: config.rsiOversold,
+  rsiOverbought: config.rsiOverbought,
 };
 
 export interface CrossoverEvent {

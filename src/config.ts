@@ -22,6 +22,16 @@ export const config = {
   volumeLookback: num("VOLUME_LOOKBACK", 20),
   volumeMultiplier: num("VOLUME_MULTIPLIER", 1.5),
 
+  // Two additional confirmed strategies evaluated alongside the MA crossover above (see
+  // src/strategy.ts) - a real BUY/SELL can come from any one of the three, each with its own
+  // trend/volume confirmation, so the bot isn't only ever waiting on one specific setup.
+  macdFastPeriod: num("MACD_FAST_PERIOD", 12),
+  macdSlowPeriod: num("MACD_SLOW_PERIOD", 26),
+  macdSignalPeriod: num("MACD_SIGNAL_PERIOD", 9),
+  rsiPeriod: num("RSI_PERIOD", 14),
+  rsiOversold: num("RSI_OVERSOLD", 30),
+  rsiOverbought: num("RSI_OVERBOUGHT", 70),
+
   tradeQuantity: num("TRADE_QUANTITY", 0.01),
   maxPosition: num("MAX_POSITION", 0.05),
   stopLossPct: num("STOP_LOSS_PCT", 2),

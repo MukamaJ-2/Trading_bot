@@ -26,25 +26,34 @@ logic are honest and correct before anything resembling real capital is ever con
 
 ## 3. Strategy Rules
 
-- Indicators: 9-period fast simple moving average (SMA), 21-period slow SMA, 50-period trend
-  SMA, and a 20-candle average volume — all computed on real candle data.
-- A raw crossover (fast SMA crossing the slow SMA on the most recent completed candle) is only
-  a *candidate* signal. It only becomes a real trade if it also passes two confirmations —
-  fewer, higher-conviction trades instead of acting on every crossover:
-  1. **Trend alignment**: a bullish crossover only counts as BUY if price is **above** the
+Three independent, confirmed strategies are evaluated on every scan, in order. The first one
+that produces a real BUY/SELL wins; if all three come back HOLD, the log reports the specific
+reason from each one. This keeps every individual trade "fewer, higher-conviction" while giving
+the bot more real ways to find a signal than waiting on one specific setup.
+
+1. **MA crossover** — 9-period fast SMA crossing the 21-period slow SMA on the most recent
+   completed candle. A raw crossover only becomes a real trade if it also passes:
+   - **Trend alignment**: a bullish crossover only counts as BUY if price is **above** the
      50-period trend SMA; a bearish crossover only counts as SELL if price is **below** it.
-  2. **Volume confirmation**: the crossover candle's volume must be at least **1.5x** the
-     average volume of the prior 20 candles — a real move, not noise.
-- Hold: no fresh crossover on the most recent candle, OR a crossover that fails trend alignment
-  or volume confirmation. Every HOLD states the specific reason (no crossover, wrong side of
-  the trend, or volume too low), so the log is always honest about why nothing was traded.
+   - **Volume confirmation**: the signal candle's volume must be at least **1.5x** the average
+     volume of the prior 20 candles — a real move, not noise.
+2. **MACD crossover** — the MACD line (12-period EMA minus 26-period EMA) crossing its own
+   9-period EMA signal line. Confirmed by the same trend + volume rules as the MA crossover.
+   Catches trend shifts the slower 9/21 MA crossover is too strict to see.
+3. **RSI mean-reversion** — a real reversal out of oversold (RSI crosses back above 30 from
+   below) or overbought (RSI crosses back below 70 from above) territory, using Wilder's
+   14-period RSI. Confirmed by volume only — **no trend filter**, since a reversal signal is,
+   by definition, expected to go against the recent trend.
+- Hold: none of the three strategies produced a fresh, confirmed signal on the most recent
+  candle. The log states each strategy's specific reason (no crossover/reversal, wrong side of
+  the trend, or volume too low), so it's always honest about why nothing was traded.
 - Configurable via `.env`: `TREND_MA_PERIOD` (default 50), `VOLUME_LOOKBACK` (default 20),
-  `VOLUME_MULTIPLIER` (default 1.5).
-- Backtest notes: no live TradingView/backtest MCP was available in this environment, so this
-  strategy was not pre-validated in TradingView. Instead, the bot's own `replay:raw` command
+  `VOLUME_MULTIPLIER` (default 1.5), `MACD_FAST_PERIOD`/`MACD_SLOW_PERIOD`/`MACD_SIGNAL_PERIOD`
+  (default 12/26/9), `RSI_PERIOD` (default 14), `RSI_OVERSOLD`/`RSI_OVERBOUGHT` (default 30/70).
+- Backtest notes: no live TradingView/backtest MCP was available in this environment, so these
+  strategies were not pre-validated in TradingView. Instead, the bot's own `replay:raw` command
   performs an honest historical replay against real Coinbase candles and reports real win/loss
-  metrics for this exact rule set (crossover + trend + volume confirmation) — treat that as the
-  first real validation of the strategy.
+  metrics for this exact combined rule set — treat that as the real validation of the strategy.
 
 ## 4. Risk Rules
 
