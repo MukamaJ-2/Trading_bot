@@ -1,0 +1,13 @@
+name: Tmp Candle Dump
+
+on:
+  workflow_dispatch:
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch real BTC-USD 5m candles from Coinbase (temporary, for a doc illustration)
+        run: |
+          curl -sS "https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=300" \
+            -H "User-Agent: trading-bot-illustration"
