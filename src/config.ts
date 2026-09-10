@@ -31,10 +31,6 @@ export const config = {
   rsiPeriod: num("RSI_PERIOD", 14),
   rsiOversold: num("RSI_OVERSOLD", 30),
   rsiOverbought: num("RSI_OVERBOUGHT", 70),
-  fibLookback: num("FIB_LOOKBACK", 50),
-  fibLevel: num("FIB_LEVEL", 0.618),
-  bollingerPeriod: num("BOLLINGER_PERIOD", 20),
-  bollingerStdDev: num("BOLLINGER_STDDEV", 2),
 
   tradeQuantity: num("TRADE_QUANTITY", 0.01),
   maxPosition: num("MAX_POSITION", 0.05),

@@ -15,10 +15,6 @@ const CONFIRMATION: ConfirmationParams = {
   rsiPeriod: config.rsiPeriod,
   rsiOversold: config.rsiOversold,
   rsiOverbought: config.rsiOverbought,
-  fibLookback: config.fibLookback,
-  fibLevel: config.fibLevel,
-  bollingerPeriod: config.bollingerPeriod,
-  bollingerStdDev: config.bollingerStdDev,
 };
 
 export interface CrossoverEvent {

@@ -26,10 +26,6 @@ export async function runScan(): Promise<void> {
     rsiPeriod: config.rsiPeriod,
     rsiOversold: config.rsiOversold,
     rsiOverbought: config.rsiOverbought,
-    fibLookback: config.fibLookback,
-    fibLevel: config.fibLevel,
-    bollingerPeriod: config.bollingerPeriod,
-    bollingerStdDev: config.bollingerStdDev,
   });
   log("SIGNAL", `${signal.action} - ${signal.reason}`);
 
