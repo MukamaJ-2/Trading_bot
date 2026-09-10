@@ -2,13 +2,14 @@
 
 A TypeScript/Node.js paper-trading bot built from the Miles High Club "Paper Trading Bot"
 Claude prompts (`TradingBotV2-1.pdf`). It trades **BTC-USD** on the **5-minute** timeframe
-using a 9/21 moving-average crossover strategy, confirmed by a 50-period trend filter and a
-volume-spike filter before any crossover is trusted as a real trade (fewer, higher-conviction
-trades — see [`trading_bot_instructions.md`](trading_bot_instructions.md) section 3), using
-only real public market data from Coinbase Exchange by default. **By default, there is no code
-path that places any order at all — every "trade" is a local simulation.** An optional, opt-in
-adapter can submit real orders to Alpaca's **paper** trading simulator (see "Optional: Alpaca
-paper trading" below) — there is still no path to live trading anywhere in this repository.
+using three independent, confirmed strategies — a 9/21 MA crossover, a MACD crossover, and an
+RSI mean-reversion reversal — each requiring its own trend and/or volume confirmation before a
+signal is trusted as a real trade (fewer, higher-conviction trades — see
+[`trading_bot_instructions.md`](trading_bot_instructions.md) section 3), using only real public
+market data from Coinbase Exchange by default. **By default, there is no code path that places
+any order at all — every "trade" is a local simulation.** An optional, opt-in adapter can
+submit real orders to Alpaca's **paper** trading simulator (see "Optional: Alpaca paper
+trading" below) — there is still no path to live trading anywhere in this repository.
 
 > **Why Coinbase and not Binance?** The PDF's default data source is Binance's public klines
 > endpoint. It works fine from a home connection, but Binance returns HTTP 451 and refuses
@@ -142,9 +143,12 @@ All settings live in `.env` (see `.env.example` for the full list and defaults):
 | `BROKER` | unset | unset (default, local simulation only) or `alpaca` (real paper order execution — see below) |
 | `INTERVAL` | `5m` | Candle interval |
 | `FAST_MA_PERIOD` / `SLOW_MA_PERIOD` | `9` / `21` | Crossover periods |
-| `TREND_MA_PERIOD` | `50` | Trend filter period — a crossover only counts if price is on the right side of this MA |
+| `TREND_MA_PERIOD` | `50` | Trend filter period — a MA/MACD crossover only counts if price is on the right side of this MA |
 | `VOLUME_LOOKBACK` | `20` | Candles averaged for the volume filter |
-| `VOLUME_MULTIPLIER` | `1.5` | Crossover candle's volume must be at least this many times the recent average |
+| `VOLUME_MULTIPLIER` | `1.5` | Signal candle's volume must be at least this many times the recent average |
+| `MACD_FAST_PERIOD` / `MACD_SLOW_PERIOD` / `MACD_SIGNAL_PERIOD` | `12` / `26` / `9` | MACD strategy periods |
+| `RSI_PERIOD` | `14` | RSI strategy lookback period |
+| `RSI_OVERSOLD` / `RSI_OVERBOUGHT` | `30` / `70` | RSI reversal thresholds |
 | `TRADE_QUANTITY` | `0.01` | Quantity per trade |
 | `MAX_POSITION` | `0.05` | Max position size before risk SKIPs a trade |
 | `STOP_LOSS_PCT` / `TAKE_PROFIT_PCT` | `2` / `4` | Documented risk bounds (see `trading_bot_instructions.md`) |
