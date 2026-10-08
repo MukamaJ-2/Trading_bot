@@ -30,9 +30,15 @@ export async function runScan(): Promise<void> {
   log("SIGNAL", `${signal.action} - ${signal.reason}`);
 
   let currentPosition = 0;
+  let brokerAvailable = config.brokerEnabled;
   if (config.brokerEnabled) {
-    currentPosition = await getPositionQty(config.symbol);
-    log("BROKER", `Real Alpaca paper position for ${config.symbol}: ${currentPosition}`);
+    try {
+      currentPosition = await getPositionQty(config.symbol);
+      log("BROKER", `Real Alpaca paper position for ${config.symbol}: ${currentPosition}`);
+    } catch (err) {
+      brokerAvailable = false;
+      log("BROKER", `Alpaca broker unavailable, continuing this scan in simulated paper mode: ${(err as Error).message}`);
+    }
   }
 
   const risk = evaluateRisk(signal.action, {
@@ -50,24 +56,32 @@ export async function runScan(): Promise<void> {
 
   const isTrade = memoryDecision.action === "BUY" || memoryDecision.action === "SELL";
 
-  if (isTrade && config.brokerEnabled) {
-    const order = await submitOrder(config.symbol, memoryDecision.action === "BUY" ? "buy" : "sell", config.tradeQuantity);
-    log(
-      "EXECUTION",
-      `Submitted REAL PAPER ${memoryDecision.action} order to Alpaca: id=${order.id} status=${order.status}. This is Alpaca's paper simulator, not live trading.`
-    );
-    appendLedgerRow({
-      timestamp: new Date().toISOString(),
-      symbol: config.symbol,
-      action: memoryDecision.action,
-      price: signal.price,
-      quantity: config.tradeQuantity,
-      reason: memoryDecision.reason,
-      mode: "scan",
-      outcome: "OPEN",
-      pnl: "",
-    });
-  } else {
+  let realOrderSubmitted = false;
+  if (isTrade && brokerAvailable) {
+    try {
+      const order = await submitOrder(config.symbol, memoryDecision.action === "BUY" ? "buy" : "sell", config.tradeQuantity);
+      log(
+        "EXECUTION",
+        `Submitted REAL PAPER ${memoryDecision.action} order to Alpaca: id=${order.id} status=${order.status}. This is Alpaca's paper simulator, not live trading.`
+      );
+      appendLedgerRow({
+        timestamp: new Date().toISOString(),
+        symbol: config.symbol,
+        action: memoryDecision.action,
+        price: signal.price,
+        quantity: config.tradeQuantity,
+        reason: memoryDecision.reason,
+        mode: "scan",
+        outcome: "OPEN",
+        pnl: "",
+      });
+      realOrderSubmitted = true;
+    } catch (err) {
+      log("BROKER", `Alpaca order submission failed, falling back to simulated paper order: ${(err as Error).message}`);
+    }
+  }
+
+  if (!realOrderSubmitted) {
     const execution = simulatePaperOrder(memoryDecision.action, config.symbol, signal.price, config.tradeQuantity);
     if (execution.orderPlaced) {
       log(
