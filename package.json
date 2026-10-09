@@ -11,7 +11,14 @@
     "replay:memory": "ts-node src/index.ts replay:memory",
     "memory:reset": "ts-node src/index.ts memory:reset",
     "broker:check": "ts-node src/index.ts broker:check",
-    "broker:preview": "ts-node src/index.ts broker:preview"
+    "broker:preview": "ts-node src/index.ts broker:preview",
+    "daily": "ts-node src/index.ts daily",
+    "daily:reset": "ts-node src/index.ts daily:reset",
+    "lab:backtest": "ts-node src/index.ts lab:backtest",
+    "lab:tournament": "ts-node src/index.ts lab:tournament",
+    "lab:plateau": "ts-node src/index.ts lab:plateau",
+    "lab:walkforward": "ts-node src/index.ts lab:walkforward",
+    "test": "node --test --require ts-node/register test/*.test.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5"
