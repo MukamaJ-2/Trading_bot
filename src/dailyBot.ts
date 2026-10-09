@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { Candle } from "./types";
 import { fetchCandles } from "./market";
-import { closedOnly, countDailyGaps, validateDaily } from "./dailyData";
+import { closedOnly, countDailyGaps, loadCandles, validateDaily } from "./dailyData";
 import { getStrategy, resolveParams, formatParams, Params } from "./strategies";
 import { ema } from "./indicators";
 
@@ -180,7 +180,19 @@ export function decide(
   return { action: "HOLD", reason: why, state: s };
 }
 
-export async function runDaily(): Promise<void> {
+export interface DailyRunResult {
+  ok: boolean;
+  action: DailyDecision["action"] | "HALT";
+  lines: string[];
+}
+
+export async function runDaily(): Promise<DailyRunResult> {
+  const lines: string[] = [];
+  const log = (label: string, msg: string) => {
+    const line = `[${new Date().toISOString()}] [${label}] ${msg}`;
+    lines.push(line);
+    console.log(line);
+  };
   const cfg = dailyConfigFromEnv();
   const strat = getStrategy(cfg.strategy);
   const params = resolveParams(strat, cfg.params);
@@ -191,8 +203,7 @@ export async function runDaily(): Promise<void> {
     const msg = `State file is for ${state.symbol} ${state.strategy}(${formatParams(state.params)}) but config says ${cfg.symbol} ${strat.name}(${formatParams(params)}). Refusing to mix them - run "npm run daily:reset" to start a fresh paper account.`;
     log("HALT", msg);
     await alert(cfg, `HALT: ${msg}`);
-    process.exitCode = 1;
-    return;
+    return { ok: false, action: "HALT", lines };
   }
   if (!state) {
     state = {
@@ -218,8 +229,7 @@ export async function runDaily(): Promise<void> {
     const msg = `market data check failed: ${(err as Error).message}`;
     log("HALT", msg);
     await alert(cfg, `HALT (${cfg.symbol}): ${msg}`);
-    process.exitCode = 1;
-    return;
+    return { ok: false, action: "HALT", lines };
   }
 
   const lastClosed = candles[candles.length - 1];
@@ -239,7 +249,7 @@ export async function runDaily(): Promise<void> {
   const equity = d.state.cash + d.state.quantity * lastClosed.close;
   log("DECISION", `${d.action}: ${d.reason}`);
 
-  if (d.action === "ALREADY_PROCESSED") return;
+  if (d.action === "ALREADY_PROCESSED") return { ok: true, action: d.action, lines };
 
   writeState(d.state);
   appendLedger([
@@ -253,8 +263,106 @@ export async function runDaily(): Promise<void> {
   log("STATUS", summary);
   if (d.action === "BUY" || d.action === "SELL") await alert(cfg, `SIGNAL ${d.action} ${cfg.symbol} @ ${fillPrice.toFixed(2)} (paper)\n${d.reason}\n${summary}`);
   else await alert(cfg, `Heartbeat: ${summary}`);
+  return { ok: true, action: d.action, lines };
 }
 
 export function resetDaily(): void {
   for (const p of [DAILY_STATE_PATH, DAILY_LEDGER_PATH]) if (fs.existsSync(p)) fs.unlinkSync(p);
+}
+
+export interface LedgerEntry {
+  timestamp: string;
+  symbol: string;
+  strategy: string;
+  candleDate: string;
+  action: string;
+  price: number | null;
+  quantity: number;
+  cash: number;
+  equity: number;
+  reason: string;
+}
+
+function splitCsvLine(line: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quoted) {
+      if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+      else if (ch === '"') quoted = false;
+      else cur += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ",") { out.push(cur); cur = ""; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+export function readDailyLedger(): LedgerEntry[] {
+  if (!fs.existsSync(DAILY_LEDGER_PATH)) return [];
+  return fs.readFileSync(DAILY_LEDGER_PATH, "utf8").split(/\r?\n/).slice(1).filter((l) => l.trim()).map((l) => {
+    const f = splitCsvLine(l);
+    return {
+      timestamp: f[0], symbol: f[1], strategy: f[2], candleDate: f[3], action: f[4],
+      price: f[5] === "" ? null : Number(f[5]), quantity: Number(f[6]), cash: Number(f[7]),
+      equity: Number(f[8]), reason: f[9] ?? "",
+    };
+  });
+}
+
+/** Everything the UI's Bot tab shows that doesn't need the network. */
+export function dailyStatus() {
+  const cfg = dailyConfigFromEnv();
+  const strat = getStrategy(cfg.strategy);
+  let params: Params | null = null;
+  let configError: string | null = null;
+  try {
+    params = resolveParams(strat, cfg.params);
+  } catch (err) {
+    configError = (err as Error).message;
+  }
+  return {
+    config: {
+      symbol: cfg.symbol, strategy: strat.name, description: strat.description, params, capital: cfg.capital,
+      commissionPct: cfg.commissionPct, slippagePct: cfg.slippagePct,
+      telegram: Boolean(cfg.telegramToken && cfg.telegramChatId), configError,
+    },
+    state: readState(),
+    ledger: readDailyLedger(),
+  };
+}
+
+/** Live view of the configured strategy on recent daily candles (read-only - never trades). */
+export async function dailySignal(bars = 180) {
+  const cfg = dailyConfigFromEnv();
+  const strat = getStrategy(cfg.strategy);
+  const params = resolveParams(strat, cfg.params);
+  const candles = await loadCandles({ symbol: cfg.symbol, days: HISTORY_DAYS, timeframe: "1d" });
+  const targets = strat.targets(candles, params);
+  const from = Math.max(0, candles.length - bars);
+  const cl = candles.map((c) => c.close);
+  const overlays: { name: string; values: (number | null)[] }[] = [];
+  if (params.fast !== undefined && params.slow !== undefined && strat.name.startsWith("ema")) {
+    overlays.push({ name: `EMA ${params.fast}`, values: ema(cl, params.fast).slice(from) });
+    overlays.push({ name: `EMA ${params.slow}`, values: ema(cl, params.slow).slice(from) });
+  }
+  let lastChange: { time: number; to: number } | null = null;
+  for (let i = candles.length - 1; i > 0; i--) {
+    if (targets[i] !== targets[i - 1]) { lastChange = { time: candles[i].closeTime, to: targets[i] }; break; }
+  }
+  const last = candles[candles.length - 1];
+  return {
+    symbol: cfg.symbol,
+    strategy: strat.name,
+    params,
+    lastClose: { time: last.closeTime, price: last.close },
+    target: targets[targets.length - 1],
+    lastChange,
+    bars: candles.slice(from).map((c) => [c.closeTime, c.open, c.high, c.low, c.close]),
+    targets: targets.slice(from),
+    overlays,
+  };
 }

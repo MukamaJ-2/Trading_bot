@@ -18,7 +18,8 @@
     "lab:tournament": "ts-node src/index.ts lab:tournament",
     "lab:plateau": "ts-node src/index.ts lab:plateau",
     "lab:walkforward": "ts-node src/index.ts lab:walkforward",
-    "test": "node --test --require ts-node/register test/*.test.ts"
+    "test": "node --test --require ts-node/register test/*.test.ts",
+    "ui": "ts-node src/index.ts ui"
   },
   "dependencies": {
     "dotenv": "^16.4.5"

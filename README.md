@@ -29,6 +29,33 @@ original 5-minute bot below and shares its data providers and paper-only rules. 
 then forward-test it on paper.** The default is the cheat sheet's winner, the **EMA 9/21
 cross on BTC daily**, which is long-only, all-in and has no leverage.
 
+### The interface: `npm run ui`
+
+```bash
+npm install
+npm run ui        # then open http://localhost:3000
+```
+
+This is a local web app that does everything below with clicks instead of commands. It
+uses no extra dependencies and stays paper-only. It listens on `127.0.0.1` only, so nothing
+outside your machine can reach it. Set `UI_PORT` to change the port.
+
+- **Bot tab.** Shows the daily paper bot's position, paper equity, closed trades and the
+  signal right now. A chart shows the last 180 days of price with the strategy's EMAs,
+  shading where the strategy wants to be long, and the bot's own fills. Below it is the full
+  paper ledger. It also has buttons to *run today's check* (the same idempotent
+  `npm run daily`) and to reset the paper account.
+- **Lab tab.** Pick a market, timeframe, start date, strategy and settings, or upload a
+  TradingView CSV. Then run:
+  - **Backtest:** gives a verdict, return / drawdown / profit factor against buy-and-hold, the
+    equity curve against buy-and-hold (with a log-scale toggle), trades marked on the price
+    chart, and the full trade list.
+  - **Tournament:** ranks every strategy. Click a row to open its backtest.
+  - **Plateau check:** a heatmap of the neighbouring settings, with your setting outlined.
+  - **Walk-forward:** compares in-sample and out-of-sample results and shows whether the
+    in-sample winner held up on data it hadn't seen.
+- Light and dark mode, and works on a phone-width screen.
+
 ### 1. Test: `npm run lab:*`
 
 All four commands run on real closed candles from the market API, or on a CSV you export

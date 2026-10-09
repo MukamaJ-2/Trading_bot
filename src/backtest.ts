@@ -58,7 +58,11 @@ export interface Metrics {
 
 export interface BacktestResult {
   trades: Trade[];
+  /** Strategy equity on each bar's close from the start bar on (aligned with candles[startIndex..]). */
   equity: number[];
+  /** Buy-and-hold equity on the same bars, for the comparison chart. */
+  buyHoldEquity: number[];
+  startIndex: number;
   metrics: Metrics;
   /** A signal on the final bar that would fill on the next (not yet existing) bar's open. */
   pendingAction: "BUY" | "SELL" | null;
@@ -181,6 +185,8 @@ export function runBacktest(candles: Candle[], targets: number[], opts: Partial<
   return {
     trades,
     equity,
+    buyHoldEquity: bhEquity,
+    startIndex: start,
     pendingAction: pending,
     metrics: {
       startTime,
