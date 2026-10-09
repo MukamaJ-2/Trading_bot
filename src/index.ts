@@ -2,6 +2,10 @@ import { runScan } from "./bot";
 import { runReplayRaw, runReplayMemory } from "./replay";
 import { resetMemory } from "./memory";
 import { runBrokerCheck, runBrokerPreview } from "./brokerCheck";
+import { parseArgs, labBacktest, labTournament, labPlateau, labWalkForward } from "./lab";
+import { runDaily, resetDaily } from "./dailyBot";
+import { startUi } from "./server";
+import { writePagesData } from "./pagesData";
 
 /**
  * Guardrail: this codebase has no LIVE order-placement code path at all - the optional
@@ -43,10 +47,35 @@ async function main(): Promise<void> {
     case "broker:preview":
       await runBrokerPreview();
       break;
+    case "daily":
+      if (!(await runDaily()).ok) process.exitCode = 1;
+      break;
+    case "ui":
+      await startUi();
+      break;
+    case "pages:data":
+      if (!(await writePagesData())) process.exitCode = 1;
+      break;
+    case "daily:reset":
+      resetDaily();
+      console.log(`[${new Date().toISOString()}] [DAILY] data/daily_state.json and data/daily_ledger.csv removed - next run starts a fresh paper account.`);
+      break;
+    case "lab:backtest":
+      await labBacktest(parseArgs(process.argv.slice(3)));
+      break;
+    case "lab:tournament":
+      await labTournament(parseArgs(process.argv.slice(3)));
+      break;
+    case "lab:plateau":
+      await labPlateau(parseArgs(process.argv.slice(3)));
+      break;
+    case "lab:walkforward":
+      await labWalkForward(parseArgs(process.argv.slice(3)));
+      break;
     default:
       console.error(`Unknown or missing command: "${command}".`);
       console.error(
-        "Usage: ts-node src/index.ts <scan|replay:raw|replay:memory|memory:reset|broker:check|broker:preview>"
+        "Usage: ts-node src/index.ts <scan|replay:raw|replay:memory|memory:reset|broker:check|broker:preview|daily|daily:reset|ui|pages:data|lab:backtest|lab:tournament|lab:plateau|lab:walkforward> [--symbol BTC-USD] [--tf 1d|1w] [--days 1095] [--start 2023-07-01] [--strategy ema_cross] [--params fast=9,slow=21] [--csv file.csv]"
       );
       process.exit(1);
   }

@@ -1,0 +1,62 @@
+name: Backtest Lab
+
+# Runs the Backtest Machine on real market data from a GitHub runner (where the public
+# Coinbase endpoint is reachable) and writes the report to the run's summary page.
+# Manual trigger only. Read-only: writes nothing back to the repository.
+on:
+  workflow_dispatch:
+    inputs:
+      symbol:
+        description: "Market (Coinbase product id, e.g. BTC-USD, ETH-USD, SOL-USD)"
+        default: "BTC-USD"
+      timeframe:
+        description: "1d or 1w"
+        default: "1d"
+      start:
+        description: "Test window start (YYYY-MM-DD)"
+        default: "2023-07-01"
+      strategy:
+        description: "Strategy to verify / plateau-check (see README)"
+        default: "ema_cross"
+      params:
+        description: "Strategy parameters, e.g. fast=9,slow=21 (blank = defaults)"
+        default: ""
+
+jobs:
+  lab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci
+
+      - run: npm test
+
+      - name: Run the Backtest Machine
+        env:
+          MARKET_DATA_PROVIDER: ${{ vars.MARKET_DATA_PROVIDER }}
+          ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
+          ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
+          IN_SYMBOL: ${{ inputs.symbol }}
+          IN_TF: ${{ inputs.timeframe }}
+          IN_START: ${{ inputs.start }}
+          IN_STRATEGY: ${{ inputs.strategy }}
+          IN_PARAMS: ${{ inputs.params }}
+        run: |
+          set -o pipefail
+          ARGS=(--symbol "$IN_SYMBOL" --tf "$IN_TF" --start "$IN_START" --strategy "$IN_STRATEGY")
+          if [ -n "$IN_PARAMS" ]; then ARGS+=(--params "$IN_PARAMS"); fi
+          {
+            echo "# Backtest Machine: $IN_SYMBOL $IN_TF from $IN_START"
+            for cmd in lab:tournament lab:backtest lab:plateau lab:walkforward; do
+              echo "## $cmd"
+              echo '```'
+              npm run -s "$cmd" -- "${ARGS[@]}" 2>&1
+              echo '```'
+            done
+          } | tee -a "$GITHUB_STEP_SUMMARY"

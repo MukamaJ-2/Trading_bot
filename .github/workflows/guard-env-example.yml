@@ -27,7 +27,7 @@ jobs:
             case "$trimmed" in
               "#"*|"") continue ;;
             esac
-            if printf '%s' "$trimmed" | grep -qE '^(ALPACA_API_KEY_ID|ALPACA_API_SECRET_KEY)[[:space:]]*='; then
+            if printf '%s' "$trimmed" | grep -qE '^(ALPACA_API_KEY_ID|ALPACA_API_SECRET_KEY|TELEGRAM_BOT_TOKEN)[[:space:]]*='; then
               value="$(printf '%s' "$trimmed" | sed -E 's/^[A-Z_]+[[:space:]]*=[[:space:]]*//')"
               if [ -n "$value" ]; then
                 echo "::error file=$FILE::Real value found for \"$trimmed\" - this is a committed PUBLIC template. Credential values belong only in .env (gitignored) or GitHub Actions secrets, never here."

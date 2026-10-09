@@ -1,0 +1,33 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Unit tests
+        run: npm test
+
+      - name: GitHub Pages build is up to date
+        run: |
+          npm run build:pages
+          if [ -n "$(git status --porcelain docs/index.html docs/engine.js docs/.nojekyll)" ]; then
+            echo "::error::docs/ is out of date with ui/index.html or src/. Run 'npm run build:pages' and commit the result."
+            git status --porcelain docs/
+            exit 1
+          fi

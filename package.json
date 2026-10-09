@@ -11,13 +11,24 @@
     "replay:memory": "ts-node src/index.ts replay:memory",
     "memory:reset": "ts-node src/index.ts memory:reset",
     "broker:check": "ts-node src/index.ts broker:check",
-    "broker:preview": "ts-node src/index.ts broker:preview"
+    "broker:preview": "ts-node src/index.ts broker:preview",
+    "daily": "ts-node src/index.ts daily",
+    "daily:reset": "ts-node src/index.ts daily:reset",
+    "lab:backtest": "ts-node src/index.ts lab:backtest",
+    "lab:tournament": "ts-node src/index.ts lab:tournament",
+    "lab:plateau": "ts-node src/index.ts lab:plateau",
+    "lab:walkforward": "ts-node src/index.ts lab:walkforward",
+    "test": "node --test --require ts-node/register test/*.test.ts",
+    "ui": "ts-node src/index.ts ui",
+    "build:pages": "node scripts/build-pages.js",
+    "pages:data": "ts-node src/index.ts pages:data"
   },
   "dependencies": {
     "dotenv": "^16.4.5"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "esbuild": "^0.25.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
   }

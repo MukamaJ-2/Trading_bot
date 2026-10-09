@@ -1,0 +1,30 @@
+//@version=6
+// EMA 9/21 cross - the same rules as `npm run lab:backtest` / `npm run daily` (strategy ema_cross).
+// From "The Backtest Machine" cheat sheet. Paste into TradingView's Pine Editor on BTCUSD, 1D,
+// then compare the Strategy Tester's trade list with `npm run lab:backtest -- --start 2023-07-01`.
+// Expect the same trades on the same dates; small price/$ differences come from the data feed
+// (TradingView's BTCUSD index vs Coinbase BTC-USD) - the shape should hold, not the exact dollar.
+strategy("EMA Cross 9/21", overlay=true,
+     initial_capital=100000,
+     default_qty_type=strategy.percent_of_equity, default_qty_value=100,
+     commission_type=strategy.commission.percent, commission_value=0.1,
+     process_orders_on_close=false)
+
+fastLen = input.int(9, "Fast EMA")
+slowLen = input.int(21, "Slow EMA")
+startDate = input.time(timestamp("2023-07-01T00:00:00Z"), "Test from")
+
+fastEMA = ta.ema(close, fastLen)
+slowEMA = ta.ema(close, slowLen)
+inWindow = time >= startDate
+
+goLong = ta.crossover(fastEMA, slowEMA) and inWindow
+goFlat = ta.crossunder(fastEMA, slowEMA)
+
+if goLong
+    strategy.entry("Long", strategy.long)
+if goFlat
+    strategy.close("Long")
+
+plot(fastEMA, "EMA 9", color=color.new(color.green, 0), linewidth=2)
+plot(slowEMA, "EMA 21", color=color.new(color.orange, 0), linewidth=2)

@@ -1,5 +1,8 @@
 # Trading Bot (Paper Trading Only)
 
+> **New:** a daily-timeframe Backtest Lab and daily paper bot built from *The Backtest
+> Machine*. See [the section below](#the-backtest-machine-daily-lab--daily-paper-bot).
+
 A TypeScript/Node.js paper-trading bot built from the Miles High Club "Paper Trading Bot"
 Claude prompts (`TradingBotV2-1.pdf`). It trades **BTC-USD** on the **5-minute** timeframe
 using three independent, confirmed strategies — a 9/21 MA crossover, a MACD crossover, and an
@@ -17,6 +20,156 @@ trading" below) — there is still no path to live trading anywhere in this repo
 > Vercel, AWS, and effectively all standard hosting equally. Coinbase Exchange's public
 > candles endpoint has no such restriction and still needs no API key, so it's the data
 > source here. `SYMBOL`/`INTERVAL` in `.env` still work the same way either way.
+
+## The Backtest Machine: daily lab + daily paper bot
+
+Built from Miles Deutscher Finance's *The Backtest Machine* cheat sheet. It sits alongside the
+original 5-minute bot below and shares its data providers and paper-only rules. The idea:
+**prove a strategy on your asset and your timeframe, check it isn't luck or curve-fitting,
+then forward-test it on paper.** The default is the cheat sheet's winner, the **EMA 9/21
+cross on BTC daily**, which is long-only, all-in and has no leverage.
+
+### The interface: `npm run ui`
+
+```bash
+npm install
+npm run ui        # then open http://localhost:3000
+```
+
+This is a local web app that does everything below with clicks instead of commands. It
+uses no extra dependencies and stays paper-only. It listens on `127.0.0.1` only, so nothing
+outside your machine can reach it. Set `UI_PORT` to change the port.
+
+- **Bot tab.** Shows the daily paper bot's position, paper equity, closed trades and the
+  signal right now. A chart shows the last 180 days of price with the strategy's EMAs,
+  shading where the strategy wants to be long, and the bot's own fills. Below it is the full
+  paper ledger. It also has buttons to *run today's check* (the same idempotent
+  `npm run daily`) and to reset the paper account.
+- **Lab tab.** Pick a market, timeframe, start date, strategy and settings, or upload a
+  TradingView CSV. Then run:
+  - **Backtest:** gives a verdict, return / drawdown / profit factor against buy-and-hold, the
+    equity curve against buy-and-hold (with a log-scale toggle), trades marked on the price
+    chart, and the full trade list.
+  - **Tournament:** ranks every strategy. Click a row to open its backtest.
+  - **Plateau check:** a heatmap of the neighbouring settings, with your setting outlined.
+  - **Walk-forward:** compares in-sample and out-of-sample results and shows whether the
+    in-sample winner held up on data it hadn't seen.
+- Light and dark mode, and works on a phone-width screen.
+
+### The interface online: GitHub Pages
+
+A browser-only copy of the same interface lives in `docs/`, so GitHub Pages can host it at
+**https://mukamaj-2.github.io/Trading_bot/**. It's public, and you can open it from any
+device.
+
+- **Lab tab:** works the same as the local version. The backtest engine runs in your browser,
+  using daily candles that the Daily Bot workflow publishes to `docs/data/candles/` once a day.
+  Use the **Market** box to pick one of the published markets (BTC-USD, ETH-USD, SOL-USD by
+  default; set the `PAGES_SYMBOLS` repository variable to change them). For any other market
+  the page tries Coinbase directly from your browser, and you can always upload a CSV.
+- **Bot tab:** a read-only view of the paper bot's last published state (`docs/data/bot.json`).
+  The bot itself runs on schedule in GitHub Actions, so the page has no "run" or "reset"
+  buttons.
+
+**To switch it on, once:**
+1. Merge this branch into `main`. Scheduled workflows only run from the default branch.
+2. In the repo, go to **Settings → Pages**. Under *Build and deployment*, set *Source* to
+   **Deploy from a branch**, then choose **`main`** and **`/docs`**, and click **Save**.
+3. Go to **Actions → Daily Bot (paper) → Run workflow**. This publishes the first data
+   snapshot. After that it refreshes itself every day at 00:07 UTC.
+4. Open the address shown at the top of the Settings → Pages screen. It takes a minute or two
+   after each change. The repo name in the address is case-sensitive: `/Trading_bot/`.
+
+Never edit `docs/index.html` or `docs/engine.js` by hand. They're built from `ui/index.html`
+and `src/` by `npm run build:pages`, and CI fails if they're out of date. The old 5-minute bot
+dashboard is still there at `docs/5m.html`.
+
+### 1. Test: `npm run lab:*`
+
+All four commands run on real closed candles from the market API, or on a CSV you export
+from TradingView with `--csv file.csv`. The test conditions match the cheat sheet: signals on
+the candle close, fills on the next open, 0.1% commission per side, 100% of equity, and
+$100,000 starting capital.
+
+| Command | What it answers |
+|---|---|
+| `npm run lab:tournament` | Runs all 8 strategies on the same asset, timeframe and window. Ranks them on return/drawdown against buy-and-hold and gives each a verdict. |
+| `npm run lab:backtest` | Prints the full trade list for one strategy: the `--backfill` you check against TradingView's Strategy Tester. |
+| `npm run lab:plateau` | **Overfitting check.** Runs the neighbouring settings (for example 7–11 × 19–23 around 9/21). A real edge is a plateau, not a spike. |
+| `npm run lab:walkforward` | **Selection-bias check.** Picks the best of ~180 configurations on the first 60% of the window, then judges it on the unseen 40%. |
+
+Flags (they also work as env vars, see `.env.example`): `--symbol BTC-USD`, `--tf 1d|1w`
+(weekly is resampled from daily, because timeframe changes results),
+`--start 2023-07-01` or `--days 1095`, `--strategy ema_cross`, `--params fast=9,slow=21`,
+`--commission 0.1`, `--slippage 0.05`, `--csv path`.
+
+```bash
+npm run lab:tournament -- --symbol BTC-USD --start 2023-07-01
+npm run lab:backtest   -- --strategy ema_cross --start 2023-07-01
+npm run lab:plateau    -- --strategy ema_cross
+npm run lab:walkforward
+npm run lab:tournament -- --symbol ETH-USD --tf 1w   # never borrow a backtest from another market
+```
+
+Verdicts follow the cheat sheet's "read the verdict" step:
+- **ANECDOTE**: fewer than 20 closed trades. This is not evidence either way.
+- **BIN**: profit factor below 1. The strategy loses money after fees.
+- **FIX**: the strategy is profitable but doesn't beat holding on return/drawdown.
+- **CANDIDATE**: profit factor of at least 1.5 and a better return/drawdown than buy-and-hold. A
+  candidate still has to pass `lab:plateau` and a paper forward test.
+
+Strategies: `ema_cross` (9/21), `ema_cross_regime` (9/21, only above the 200 SMA), `sma_cross`
+(50/200 golden cross), `supertrend` (10, 3), `donchian` (20/10 turtle breakout), `macd`
+(12/26/9), `price_sma` (200), `rsi_reversion` (14, 30/70).
+
+**Run it on GitHub:** go to Actions, open **Backtest Lab** and click *Run workflow*. It runs
+all four lab commands on real data and posts the report to the run's summary page. Use this
+when your own network blocks the data API.
+
+**Verify against TradingView:** paste [`pine/ema_cross_9_21.pine`](pine/ema_cross_9_21.pine)
+into the Pine Editor on BTCUSD 1D. Then compare its trade list with
+`npm run lab:backtest -- --start 2023-07-01`. The entry and exit dates should match. Prices
+differ slightly between data feeds. If the dates disagree, stop and fix it before going further.
+
+### 2. Forward-test: `npm run daily` (paper only)
+
+This is the cheat sheet's daily loop. Once per day after the 00:00 UTC close, the bot:
+1. fetches daily candles,
+2. evaluates the strategy on the **closed** candle,
+3. if it crossed, paper-buys or paper-sells at the new candle's open,
+4. logs to `data/daily_ledger.csv` and alerts.
+
+On days with no cross it does nothing, and that discipline is the strategy.
+
+- **No double entries.** State lives in `data/daily_state.json` and is written atomically.
+  Every closed candle is processed exactly once, so re-running the same day is a no-op. Missed
+  days are caught up in order. The first run never chases a trend that is already in progress.
+- **Halt on anything unexpected.** Missing or stale candles, broken OHLC, or a state file
+  that belongs to a different symbol or strategy all cause the bot to log, alert, and exit
+  non-zero. It never guesses.
+- **The bot matches the backtest.** A unit test steps the daily bot day by day over a series
+  and asserts it makes exactly the same fills, and ends with exactly the same equity, as the
+  backtest engine.
+- **Alerts:** optional Telegram (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` as secrets) for every
+  signal plus a daily heartbeat.
+- **Scheduled:** `.github/workflows/daily-bot.yml` runs at 00:07 UTC and commits the paper state.
+- `npm run daily:reset` starts a fresh paper account.
+
+### 3. The ladder: never skip a rung
+
+**validate (lab) → paper forward test for several weeks (`daily`) → only then consider more.**
+This repository stops at paper. It has no live-trading path. Adding one would be a separate,
+explicit decision, and it must follow the cheat sheet's non-negotiables:
+- trade-only API keys (withdrawals disabled, IP-whitelisted),
+- a hard capital cap,
+- start smaller than feels necessary.
+
+Anyone who asks you to deposit funds into a bot or contract address to "activate" it is
+running a scam.
+
+> No strategy is good or bad in general. It is matched or mismatched to an asset, a
+> timeframe and a market regime. A backtest is a verdict on the past, not a promise about the
+> future. This is education, not financial advice.
 
 ## What the bot does
 
