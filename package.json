@@ -19,13 +19,16 @@
     "lab:plateau": "ts-node src/index.ts lab:plateau",
     "lab:walkforward": "ts-node src/index.ts lab:walkforward",
     "test": "node --test --require ts-node/register test/*.test.ts",
-    "ui": "ts-node src/index.ts ui"
+    "ui": "ts-node src/index.ts ui",
+    "build:pages": "node scripts/build-pages.js",
+    "pages:data": "ts-node src/index.ts pages:data"
   },
   "dependencies": {
     "dotenv": "^16.4.5"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "esbuild": "^0.25.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
   }

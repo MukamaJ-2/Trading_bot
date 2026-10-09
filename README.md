@@ -56,6 +56,34 @@ outside your machine can reach it. Set `UI_PORT` to change the port.
     in-sample winner held up on data it hadn't seen.
 - Light and dark mode, and works on a phone-width screen.
 
+### The interface online: GitHub Pages
+
+A browser-only copy of the same interface lives in `docs/`, so GitHub Pages can host it at
+**https://mukamaj-2.github.io/Trading_bot/**. It's public, and you can open it from any
+device.
+
+- **Lab tab:** works the same as the local version. The backtest engine runs in your browser,
+  using daily candles that the Daily Bot workflow publishes to `docs/data/candles/` once a day.
+  Use the **Market** box to pick one of the published markets (BTC-USD, ETH-USD, SOL-USD by
+  default; set the `PAGES_SYMBOLS` repository variable to change them). For any other market
+  the page tries Coinbase directly from your browser, and you can always upload a CSV.
+- **Bot tab:** a read-only view of the paper bot's last published state (`docs/data/bot.json`).
+  The bot itself runs on schedule in GitHub Actions, so the page has no "run" or "reset"
+  buttons.
+
+**To switch it on, once:**
+1. Merge this branch into `main`. Scheduled workflows only run from the default branch.
+2. In the repo, go to **Settings → Pages**. Under *Build and deployment*, set *Source* to
+   **Deploy from a branch**, then choose **`main`** and **`/docs`**, and click **Save**.
+3. Go to **Actions → Daily Bot (paper) → Run workflow**. This publishes the first data
+   snapshot. After that it refreshes itself every day at 00:07 UTC.
+4. Open the address shown at the top of the Settings → Pages screen. It takes a minute or two
+   after each change. The repo name in the address is case-sensitive: `/Trading_bot/`.
+
+Never edit `docs/index.html` or `docs/engine.js` by hand. They're built from `ui/index.html`
+and `src/` by `npm run build:pages`, and CI fails if they're out of date. The old 5-minute bot
+dashboard is still there at `docs/5m.html`.
+
 ### 1. Test: `npm run lab:*`
 
 All four commands run on real closed candles from the market API, or on a CSV you export

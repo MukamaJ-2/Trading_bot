@@ -1,7 +1,8 @@
 name: Daily Bot (paper)
 
 # The Backtest Machine "daily loop": once per day, just after the 00:00 UTC daily close.
-# Paper only - no exchange order is ever placed. State lives in data/daily_state.json, so a
+# Paper only - no exchange order is ever placed. Also publishes docs/data/ for the
+# GitHub Pages interface. State lives in data/daily_state.json, so a
 # re-run on the same day is a no-op (never double-enters).
 # GitHub only fires `schedule` triggers from the default branch.
 on:
@@ -43,13 +44,27 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
+      - name: Publish data for the GitHub Pages interface
+        if: always()
+        run: npm run pages:data
+        env:
+          MARKET_DATA_PROVIDER: ${{ vars.MARKET_DATA_PROVIDER }}
+          ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
+          ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
+          DAILY_SYMBOL: ${{ vars.DAILY_SYMBOL }}
+          DAILY_STRATEGY: ${{ vars.DAILY_STRATEGY }}
+          DAILY_PARAMS: ${{ vars.DAILY_PARAMS }}
+          PAPER_CAPITAL: ${{ vars.PAPER_CAPITAL }}
+          # Markets offered in the Pages Backtest Lab (comma-separated Coinbase product ids).
+          PAGES_SYMBOLS: ${{ vars.PAGES_SYMBOLS }}
+
       - name: Commit paper state
         if: always()
         run: |
           git config user.name "trading-bot"
           git config user.email "actions@users.noreply.github.com"
-          if [ -n "$(git status --porcelain data/)" ]; then
-            git add data/
+          if [ -n "$(git status --porcelain data/ docs/data/)" ]; then
+            git add data/ docs/data/
             git commit -m "Daily bot: update paper state [skip ci]"
             git pull --rebase origin "${GITHUB_REF_NAME}"
             git push

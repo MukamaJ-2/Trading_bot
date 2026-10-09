@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Backtest Machine</title>
+<!-- STATIC_MODE -->
 <style>
   :root {
     color-scheme: light;
@@ -95,6 +96,7 @@
     color: var(--text-primary);
     font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
   }
+  a { color: var(--series-1); }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 64px; }
   header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-bottom: 18px; }
   header h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
@@ -250,7 +252,8 @@
           <span class="step">1 Validate in Lab</span>›<span class="step here">2 Paper forward test</span>›<span class="step">3 Testnet</span>›<span class="step">4 Small live</span>
         </div>
       </div>
-      <div class="actions" style="margin-top:4px">
+      <p class="notes" id="staticBotNote" hidden></p>
+      <div class="actions" style="margin-top:4px" id="botActions">
         <button class="btn primary" id="runBtn" type="button">Run today's check</button>
         <button class="btn" id="refreshBtn" type="button">Refresh</button>
         <button class="btn danger" id="resetBtn" type="button">Reset paper account</button>
@@ -313,7 +316,7 @@
     <div id="labOut"></div>
   </section>
 
-  <footer>A backtest is a verdict on the past, not a promise about the future. Education, not financial advice.</footer>
+  <footer>A backtest is a verdict on the past, not a promise about the future. Education, not financial advice.<span id="legacyLink" hidden> · <a href="5m.html">Old 5-minute bot dashboard</a></span></footer>
 </div>
 
 <div class="tooltip" id="tip" role="status" aria-live="polite"></div>
@@ -324,6 +327,9 @@
 
   // ---------- helpers ----------
   var $ = function (id) { return document.getElementById(id); };
+  // Static mode = the GitHub Pages build: no local server, the engine runs in the browser (BM)
+  // and the bot's data comes from docs/data/bot.json, published daily by GitHub Actions.
+  var STATIC = !!window.BM_STATIC;
   function el(tag, attrs, children) {
     var n = document.createElement(tag);
     if (attrs) Object.keys(attrs).forEach(function (k) {
@@ -636,14 +642,27 @@
   var botRenderers = [];
   async function loadBot() {
     $("botError").hidden = true;
-    var status;
-    try { status = await api("/api/daily/status"); }
+    var status, published = null;
+    try {
+      if (STATIC) {
+        var res = await fetch("data/bot.json", { cache: "no-cache" });
+        if (!res.ok) throw new Error("No bot data published yet. In GitHub, open Actions → “Daily Bot (paper)” → Run workflow; it publishes the paper bot's status here once a day.");
+        published = await res.json();
+        status = published;
+        $("staticBotNote").hidden = false;
+        $("staticBotNote").textContent = "Read-only view. The paper bot runs itself every day at 00:07 UTC on GitHub Actions; this page shows its last published state (" +
+          new Date(published.generatedAt).toLocaleString() + "). To run it now: Actions → “Daily Bot (paper)” → Run workflow.";
+      } else {
+        status = await api("api/daily/status");
+      }
+    }
     catch (e) { $("botError").hidden = false; $("botError").textContent = e.message; return; }
     var c = status.config, s = status.state;
     $("botTitle").textContent = "Daily paper bot · " + c.symbol;
     $("botConfig").textContent = c.strategy + (c.params ? " (" + paramsText(c.params) + ")" : "") +
       " · paper capital " + fmtMoney(c.capital) + " · " + c.commissionPct + "% fee per side · Telegram alerts " + (c.telegram ? "on" : "off") +
-      " · change these in .env (DAILY_SYMBOL, DAILY_STRATEGY, DAILY_PARAMS, PAPER_CAPITAL)";
+      (STATIC ? " · change these as repository variables (DAILY_SYMBOL, DAILY_STRATEGY, DAILY_PARAMS, PAPER_CAPITAL)"
+              : " · change these in .env (DAILY_SYMBOL, DAILY_STRATEGY, DAILY_PARAMS, PAPER_CAPITAL)");
     if (c.configError) { $("botError").hidden = false; $("botError").textContent = "Config problem: " + c.configError; }
 
     var tiles = $("botTiles");
@@ -651,7 +670,7 @@
     var lastEq = status.ledger.length ? status.ledger[status.ledger.length - 1].equity : (s ? s.cash : c.capital);
     var capital = s ? s.capital : c.capital;
     if (!s) {
-      tiles.appendChild(tile("Position", "No account yet", "Click “Run today's check” to start the paper account"));
+      tiles.appendChild(tile("Position", "No account yet", STATIC ? "Starts on the first scheduled run of the Daily Bot workflow" : "Click “Run today's check” to start the paper account"));
     } else {
       tiles.appendChild(tile("Position", s.quantity > 0 ? "LONG" : "FLAT",
         s.quantity > 0 ? s.quantity.toFixed(6) + " @ " + fmtPrice(s.entryPrice) : "Waiting for the next entry signal"));
@@ -675,7 +694,13 @@
 
     // live signal + chart
     try {
-      var sig = await api("/api/daily/signal");
+      var sig;
+      if (STATIC) {
+        if (!published.signal) throw new Error(published.signalError || "No signal published.");
+        sig = published.signal;
+      } else {
+        sig = await api("api/daily/signal");
+      }
       var v = sigTile.querySelector(".value"), note = sigTile.querySelector(".note");
       v.textContent = sig.target === 1 ? "Long" : "Flat";
       note.textContent = (sig.lastChange ? "Since " + fmtDate(sig.lastChange.time) + " close" : "No change in history") + " · last close " + fmtPrice(sig.lastClose.price);
@@ -727,7 +752,7 @@
     log.hidden = false;
     log.textContent = "Running the daily check…";
     try {
-      var r = await api("/api/daily/run", {});
+      var r = await api("api/daily/run", {});
       log.textContent = r.lines.join("\n");
     } catch (e) {
       log.textContent = "Failed: " + e.message;
@@ -737,7 +762,7 @@
   });
   $("resetBtn").addEventListener("click", async function () {
     if (!confirm("Reset the paper account? This deletes data/daily_state.json and data/daily_ledger.csv. Paper only — no real funds are involved.")) return;
-    try { await api("/api/daily/reset", { confirm: true }); $("runLog").hidden = true; }
+    try { await api("api/daily/reset", { confirm: true }); $("runLog").hidden = true; }
     catch (e) { alert(e.message); }
     loadBot();
   });
@@ -806,7 +831,8 @@
     $("labStatus").appendChild(el("span", { class: "spinner", "aria-hidden": "true" }));
     $("labStatus").appendChild(document.createTextNode(mode === "walkforward" ? "Optimising ~180 configurations in-sample…" : "Running…"));
     try {
-      var r = await api("/api/lab/" + mode, body);
+      if (STATIC) await new Promise(function (res) { setTimeout(res, 30); }); // let the spinner paint before in-page compute
+      var r = STATIC ? await BM.runLab(mode, body) : await api("api/lab/" + mode, body);
       clearLabCharts();
       $("labOut").textContent = "";
       ({ backtest: showBacktest, tournament: showTournament, plateau: showPlateau, walkforward: showWalkForward })[mode](r, body);
@@ -1065,7 +1091,19 @@
     var tab = "bot";
     try { tab = localStorage.getItem("bm-tab") || "bot"; } catch (e) {}
     try {
-      META = await api("/api/meta");
+      if (STATIC) {
+        META = { strategies: BM.strategies, defaults: BM.defaults };
+        $("botActions").hidden = true;
+        $("legacyLink").hidden = false;
+        fetch("data/index.json", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (idx) {
+          if (!idx || !idx.symbols) return;
+          var dl = $("symbols");
+          dl.textContent = "";
+          idx.symbols.forEach(function (sym) { dl.appendChild(el("option", { value: sym })); });
+        }).catch(function () {});
+      } else {
+        META = await api("api/meta");
+      }
       var sel = $("f-strategy");
       META.strategies.forEach(function (s) { sel.appendChild(el("option", { value: s.name, text: s.name })); });
       var saved = null;
