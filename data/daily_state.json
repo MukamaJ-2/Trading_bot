@@ -1,0 +1,17 @@
+{
+  "symbol": "BTC-USD",
+  "strategy": "ema_cross",
+  "params": {
+    "fast": 9,
+    "slow": 21
+  },
+  "capital": 100000,
+  "cash": 100000,
+  "quantity": 0,
+  "entryPrice": null,
+  "entryTime": null,
+  "lastProcessedOpenTime": 1791504000000,
+  "closedTrades": 0,
+  "wins": 0,
+  "realizedPnl": 0
+}

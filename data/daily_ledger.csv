@@ -1,0 +1,2 @@
+timestamp,symbol,strategy,candle_date,action,price,quantity,cash,equity,reason
+2026-10-10T00:34:09.793Z,BTC-USD,"ema_cross(fast=9,slow=21)",2026-10-09,HOLD,,0.00000000,100000.00,100000.00,no fresh signal - doing nothing is the strategy.
