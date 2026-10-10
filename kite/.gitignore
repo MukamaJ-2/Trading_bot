@@ -1,6 +1,0 @@
-# Backend local state: saved Kite session (access token), caches, dummy GTT records.
-backend/state/
-backend/.env
-backend/.venv/
-__pycache__/
-.pytest_cache/

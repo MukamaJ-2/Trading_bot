@@ -1,8 +1,5 @@
 # Trading Bot (Paper Trading Only)
 
-> **New:** a Zerodha Kite (NSE) dashboard with SMA signals, a breakout-retest scanner and a
-> simulated (dummy-only) GTT workflow lives in [`kite/`](kite/README.md).
-
 > **New:** a daily-timeframe Backtest Lab and daily paper bot built from *The Backtest
 > Machine*. See [the section below](#the-backtest-machine-daily-lab--daily-paper-bot).
 
