@@ -1,7 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" translate="no">
 <head>
 <meta charset="utf-8" />
+<meta name="google" content="notranslate" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Trading Bot Dashboard</title>
 <style>
@@ -351,7 +352,7 @@
   function fmtTime(iso) {
     var d = new Date(iso);
     if (isNaN(d.getTime())) return iso;
-    return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
   }
 
   function badge(outcome) {
@@ -564,7 +565,7 @@
     ]).then(function (results) {
       var rows = parseCsv(results[0]);
       render(rows, results[1]);
-      fetchStatus.textContent = "Last fetched " + new Date().toLocaleTimeString() + " · " + rows.length + " ledger row(s)";
+      fetchStatus.textContent = "Last fetched " + new Date().toLocaleTimeString("en-US") + " · " + rows.length + " ledger row(s)";
     }).catch(function (err) {
       content.innerHTML = '<div class="empty-state">Could not load data from GitHub: ' + escapeHtml(err.message) +
         ". This can happen right after the very first commit, or if raw.githubusercontent.com is temporarily unreachable. Try Refresh in a moment.</div>";

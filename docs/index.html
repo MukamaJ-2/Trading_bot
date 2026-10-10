@@ -1,8 +1,9 @@
 <!doctype html>
 <!-- Generated from ui/index.html by `npm run build:pages` - edit that file, not this one. -->
-<html lang="en">
+<html lang="en" translate="no">
 <head>
 <meta charset="utf-8" />
+<meta name="google" content="notranslate" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Backtest Machine</title>
 <script>window.BM_STATIC = true;</script>
@@ -137,10 +138,14 @@
     font: inherit; color: var(--text-primary); background: var(--surface-1);
     border: 1px solid var(--baseline); border-radius: 8px; padding: 6px 8px; min-width: 0;
   }
-  input[type="number"] { width: 84px; }
-  input[type="date"] { width: 150px; }
+  input.num { width: 84px; }
+  input.date { width: 120px; font-variant-numeric: tabular-nums; }
   input.sym { width: 120px; }
-  input[type="file"] { border: 0; padding: 0; max-width: 230px; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .filepick { display: flex; align-items: center; gap: 8px; }
+  .filepick .btn { padding: 6px 10px; font-weight: 500; }
+  .filepick .fname { color: var(--text-secondary); font-size: 12px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  input.invalid { border-color: var(--critical); }
   .params { display: flex; gap: 10px; flex-wrap: wrap; }
   :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
@@ -226,7 +231,6 @@
   @media (max-width: 640px) {
     .tabs { margin-left: 0; width: 100%; }
     .tabs button { flex: 1; }
-    input[type="date"] { width: 140px; }
   }
 </style>
 </head>
@@ -297,12 +301,19 @@
         <div class="field"><label for="f-tf">Timeframe</label>
           <select id="f-tf"><option value="1d">Daily</option><option value="1w">Weekly</option></select>
         </div>
-        <div class="field"><label for="f-start">Test from</label><input id="f-start" type="date" value="2023-07-01" /></div>
+        <div class="field"><label for="f-start">Test from</label><input id="f-start" class="date" type="text" inputmode="numeric" placeholder="YYYY-MM-DD" maxlength="10" value="2023-07-01" aria-describedby="startHint" /><span id="startHint" class="visually-hidden">Format: year-month-day, for example 2023-07-01</span></div>
         <div class="field"><label for="f-strategy">Strategy</label><select id="f-strategy"></select></div>
         <div class="params" id="f-params"></div>
-        <div class="field"><label for="f-comm">Fee / side %</label><input id="f-comm" type="number" step="0.01" min="0" value="0.1" /></div>
-        <div class="field"><label for="f-slip">Slippage %</label><input id="f-slip" type="number" step="0.01" min="0" value="0" /></div>
-        <div class="field"><label for="f-csv">Or a TradingView CSV</label><input id="f-csv" type="file" accept=".csv,text/csv" /></div>
+        <div class="field"><label for="f-comm">Fee / side %</label><input id="f-comm" class="num" type="text" inputmode="decimal" value="0.1" /></div>
+        <div class="field"><label for="f-slip">Slippage %</label><input id="f-slip" class="num" type="text" inputmode="decimal" value="0" /></div>
+        <div class="field"><span class="label-text" id="csvLabel" style="font-size:12px;color:var(--text-secondary)">Or a TradingView CSV</span>
+          <div class="filepick">
+            <input id="f-csv" class="visually-hidden" type="file" accept=".csv,text/csv" tabindex="-1" aria-hidden="true" />
+            <button class="btn" id="csvBtn" type="button" aria-describedby="csvLabel">Choose CSV file</button>
+            <span class="fname" id="csvName">No file chosen</span>
+            <button class="btn" id="csvClear" type="button" hidden>Remove</button>
+          </div>
+        </div>
       </form>
       <p class="notes" id="stratDesc" style="margin:10px 0 0"></p>
       <div class="actions" role="group" aria-label="Run">
@@ -356,6 +367,7 @@
   function fmtPrice(x) { return x == null ? "" : x.toLocaleString("en-US", { maximumFractionDigits: x < 10 ? 4 : 2 }); }
   function fmtPF(x) { return x === "inf" ? "∞" : x == null ? "n/a" : Number(x).toFixed(2); }
   function fmtDate(ms) { return new Date(ms).toISOString().slice(0, 10); }
+  function fmtStamp(iso) { var d = new Date(iso); return d.getUTCDate() + " " + MONTHS[d.getUTCMonth()] + " " + d.getUTCFullYear() + ", " + d.toISOString().slice(11, 16) + " UTC"; }
   var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   function fmtShort(ms, spanDays) {
     var d = new Date(ms);
@@ -653,7 +665,7 @@
         status = published;
         $("staticBotNote").hidden = false;
         $("staticBotNote").textContent = "Read-only view. The paper bot runs itself every day at 00:07 UTC on GitHub Actions; this page shows its last published state (" +
-          new Date(published.generatedAt).toLocaleString() + "). To run it now: Actions → “Daily Bot (paper)” → Run workflow.";
+          fmtStamp(published.generatedAt) + "). To run it now: Actions → “Daily Bot (paper)” → Run workflow.";
       } else {
         status = await api("api/daily/status");
       }
@@ -762,10 +774,22 @@
     b.disabled = false;
     loadBot();
   });
+  var resetArmed = null;
   $("resetBtn").addEventListener("click", async function () {
-    if (!confirm("Reset the paper account? This deletes data/daily_state.json and data/daily_ledger.csv. Paper only — no real funds are involved.")) return;
-    try { await api("api/daily/reset", { confirm: true }); $("runLog").hidden = true; }
-    catch (e) { alert(e.message); }
+    var b = $("resetBtn");
+    if (!resetArmed) {
+      // First click only asks; a second click within 6 seconds confirms.
+      b.textContent = "Click again to confirm reset";
+      $("runLog").hidden = false;
+      $("runLog").textContent = "This deletes the paper account (data/daily_state.json and data/daily_ledger.csv) and starts fresh. Paper only — no real money is involved.";
+      resetArmed = setTimeout(function () { resetArmed = null; b.textContent = "Reset paper account"; }, 6000);
+      return;
+    }
+    clearTimeout(resetArmed);
+    resetArmed = null;
+    b.textContent = "Reset paper account";
+    try { await api("api/daily/reset", { confirm: true }); $("runLog").textContent = "Paper account reset."; }
+    catch (e) { $("runLog").textContent = "Reset failed: " + e.message; }
     loadBot();
   });
 
@@ -791,39 +815,75 @@
       var id = "p-" + k;
       box.appendChild(el("div", { class: "field" }, [
         el("label", { for: id, text: k }),
-        el("input", { id: id, type: "number", step: String(spec.step), min: String(spec.min), value: String(values && values[k] != null ? values[k] : spec.default), "data-param": k }),
+        el("input", { id: id, class: "num", type: "text", inputmode: "decimal", value: String(values && values[k] != null ? values[k] : spec.default), "data-param": k }),
       ]));
     });
     $("stratDesc").textContent = s.description;
   }
 
+  // Text inputs instead of the browser's own date/number widgets, so everything shows in English
+  // with "." decimals whatever the browser's language. A typed "," is accepted as a decimal point.
+  function cleanNumber(v) { return String(v).trim().replace(",", "."); }
+  function validateForm() {
+    var problems = [];
+    var start = $("f-start");
+    var okDate = /^\d{4}-\d{2}-\d{2}$/.test(start.value.trim()) && !isNaN(Date.parse(start.value.trim()));
+    start.classList.toggle("invalid", !okDate);
+    if (!okDate) problems.push("“Test from” must be a date written as YYYY-MM-DD, for example 2023-07-01.");
+    document.querySelectorAll("input.num").forEach(function (i) {
+      var ok = cleanNumber(i.value) !== "" && isFinite(Number(cleanNumber(i.value))) && Number(cleanNumber(i.value)) >= 0;
+      i.classList.toggle("invalid", !ok);
+      if (!ok) problems.push("“" + (document.querySelector('label[for="' + i.id + '"]') || { textContent: i.id }).textContent + "” must be a number of 0 or more.");
+    });
+    return problems;
+  }
+
   function readForm() {
     var params = [];
-    document.querySelectorAll("[data-param]").forEach(function (i) { params.push(i.getAttribute("data-param") + "=" + i.value); });
+    document.querySelectorAll("[data-param]").forEach(function (i) { params.push(i.getAttribute("data-param") + "=" + cleanNumber(i.value)); });
     return {
       symbol: $("f-symbol").value.trim(),
       timeframe: $("f-tf").value,
-      start: $("f-start").value,
+      start: $("f-start").value.trim(),
       strategy: $("f-strategy").value,
       params: params.join(","),
-      commissionPct: $("f-comm").value,
-      slippagePct: $("f-slip").value,
+      commissionPct: cleanNumber($("f-comm").value),
+      slippagePct: cleanNumber($("f-slip").value),
     };
   }
 
   var csvText = null;
+  $("csvBtn").addEventListener("click", function () { $("f-csv").click(); });
+  $("csvClear").addEventListener("click", function () {
+    csvText = null;
+    $("f-csv").value = "";
+    $("csvName").textContent = "No file chosen";
+    $("csvClear").hidden = true;
+    $("labStatus").textContent = "Using market data again.";
+  });
   $("f-csv").addEventListener("change", function () {
     var f = this.files && this.files[0];
     csvText = null;
     if (!f) return;
     var r = new FileReader();
-    r.onload = function () { csvText = String(r.result); $("labStatus").textContent = "Using " + f.name + " instead of the market API."; };
+    r.onload = function () {
+      csvText = String(r.result);
+      $("csvName").textContent = f.name;
+      $("csvClear").hidden = false;
+      $("labStatus").textContent = "Using " + f.name + " instead of market data.";
+    };
     r.readAsText(f);
   });
 
   var running = false;
   async function runLab(mode, overrides) {
     if (running) return;
+    var problems = validateForm();
+    if (problems.length) {
+      $("labError").hidden = false;
+      $("labError").textContent = problems.join(" ");
+      return;
+    }
     running = true;
     var body = Object.assign(readForm(), overrides || {});
     if (csvText) body.csvText = csvText;
