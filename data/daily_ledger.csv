@@ -39,3 +39,4 @@ timestamp,symbol,strategy,candle_date,action,price,quantity,cash,equity,reason
 2026-11-16T05:54:08.608Z,BTC-USD,"ema_cross(fast=9,slow=21)",2026-11-15,HOLD,,0.00000000,100000.00,100000.00,no fresh signal - doing nothing is the strategy.
 2026-11-17T07:30:40.742Z,BTC-USD,"ema_cross(fast=9,slow=21)",2026-11-16,HOLD,,0.00000000,100000.00,100000.00,no fresh signal - doing nothing is the strategy.
 2026-11-18T06:54:56.241Z,BTC-USD,"ema_cross(fast=9,slow=21)",2026-11-17,HOLD,,0.00000000,100000.00,100000.00,no fresh signal - doing nothing is the strategy.
+2026-11-19T06:55:41.633Z,BTC-USD,"ema_cross(fast=9,slow=21)",2026-11-18,HOLD,,0.00000000,100000.00,100000.00,no fresh signal - doing nothing is the strategy.
